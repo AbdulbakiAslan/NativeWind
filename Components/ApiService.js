@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CommonActions } from "@react-navigation/native";
+import { Login } from "../Screens/Login/Login";
 
 const baseUrl = "http://10.0.2.2:5237/api/"; // Gerçek API
 
@@ -96,6 +97,54 @@ export async function PostRealApi(url, data, navigation) {
     return JSON.parse(jsonResponse);
   } catch (error) {
     console.log("❌ Gerçek API POST Hatası:", error);
+    return null;
+  }
+}
+
+// API PUT Fonksiyonu (401 Kontrolü ile)
+export async function PutRealApi(url, data, navigation) {
+  try {
+    const apiUrl = baseUrl + url;
+    const token = await getToken();
+    const headers = token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json" };
+
+    console.log("📡 Gerçek API PUT İsteği:", apiUrl);
+    console.log("📦 Gönderilen Veri:", JSON.stringify(data));
+
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP Hatası: ${response.status}`);
+    }
+
+    // Eğer API 204 (No Content) döndürüyorsa, güncelleme başarılı kabul edilir.
+    if (response.status === 204) {
+      console.log("📡 API başarıyla güncellendi (204), içerik boş.");
+      return {};
+    }
+
+    // Eğer durum 200 ise ve içerik boşsa da, başarı olarak kabul edelim.
+    const text = await response.text();
+    if (!text) {
+      console.log("📡 API başarıyla güncellendi, ancak içerik boş.");
+      return {};
+    }
+
+    return JSON.parse(text);
+  } catch (error) {
+    console.log("❌ Gerçek API PUT Hatası:", error);
     return null;
   }
 }

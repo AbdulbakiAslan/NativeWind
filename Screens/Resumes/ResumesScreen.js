@@ -1,3 +1,5 @@
+// ResumesScreen.js
+
 import * as React from "react";
 import {
   FlatList,
@@ -7,10 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ResumeItem } from "./ResumeItem";
+import { MaterialIcons } from "@expo/vector-icons"; // İkonlar için
 import { useNavigation } from "@react-navigation/native";
 import { GetRealApi } from "../../Components/ApiService"; // Gerçek API
-import { checkTokenAndRedirect } from "../../Components/utils"; // 📌 Token kontrolünü ekledik
+import { checkTokenAndRedirect } from "../../Components/utils"; // Token kontrolü
 
 export const ResumesScreen = () => {
   const nav = useNavigation();
@@ -20,7 +22,6 @@ export const ResumesScreen = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
 
-  // 📌 **Sayfa açıldığında önce token kontrolü yap**
   React.useEffect(() => {
     checkTokenAndRedirect(nav);
     fetchResumes();
@@ -32,9 +33,7 @@ export const ResumesScreen = () => {
       console.log("📡 API isteği gönderiliyor: /api/Resume");
 
       const realResumes = await GetRealApi("Resume", nav);
-      if (realResumes === null) {
-        return;
-      }
+      if (realResumes === null) return;
 
       if (!Array.isArray(realResumes)) {
         console.error("❌ API beklenen formatta veri döndürmedi.");
@@ -74,34 +73,95 @@ export const ResumesScreen = () => {
     setFilteredResumes(filtered);
   };
 
+  // Her bir resume öğesini render eden fonksiyon
+  const renderResumeItem = ({ item }) => {
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: "#e5e7eb",
+        }}
+      >
+        <View>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            {item.name} {item.lastName}
+          </Text>
+          <Text style={{ fontSize: 14, color: "#6b7280" }}>{item.email}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {/* Düzenleme Butonu */}
+          <TouchableOpacity
+            onPress={() => nav.navigate("EditResume", { resume: item })}
+          >
+            <MaterialIcons name="edit" size={24} color="blue" />
+          </TouchableOpacity>
+          {/* Silme Butonu */}
+          <TouchableOpacity
+            onPress={() => {
+              console.log("Silinecek resume id:", item.id);
+            }}
+          >
+            <MaterialIcons name="delete" size={24} color="red" />
+          </TouchableOpacity>
+          {/* Bilgi Butonu: resumeId parametresi gönderiliyor */}
+          <TouchableOpacity
+            onPress={() => nav.navigate("ResumeDetail", { resumeId: item.id })}
+          >
+            <MaterialIcons name="info" size={24} color="green" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
-    <View>
-      <View className="flex-row items-center w-full px-2 gap-2">
+    <View style={{ flex: 1 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 8,
+          paddingVertical: 12,
+          gap: 8,
+        }}
+      >
         <TextInput
           value={searchText}
           onChangeText={handleSearch}
-          className="bg-gray-300 p-2 rounded-md flex-1"
           placeholder="Ara..."
+          style={{
+            flex: 1,
+            backgroundColor: "#d1d5db",
+            padding: 8,
+            borderRadius: 8,
+          }}
         />
-
-        {/* 📌 Ekleme Butonu - Herkes için aktif hale getirildi */}
+        {/* Özgeçmiş ekleme butonu */}
         <TouchableOpacity
-          className="bg-blue-500 items-center justify-center px-4 py-2 rounded-md"
+          style={{
+            backgroundColor: "#3b82f6",
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 8,
+          }}
           onPress={() => nav.navigate("AddResume")}
         >
-          <Text className="text-white font-bold">Ekle</Text>
+          <Text style={{ color: "white", fontWeight: "bold" }}>Ekle</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
         data={filteredResumes}
-        renderItem={({ item }) => <ResumeItem resume={item} />}
-        showsVerticalScrollIndicator={false}
+        renderItem={renderResumeItem}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
-        ListFooterComponent={() => <View className="mb-8" />}
+        ListFooterComponent={<View style={{ marginBottom: 64 }} />}
       />
     </View>
   );

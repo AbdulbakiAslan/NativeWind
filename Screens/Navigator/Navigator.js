@@ -17,8 +17,9 @@ import { ProfileDetail } from "../Profiles/ProfileDetail";
 import { AddProfile } from "../Profiles/AddProfile";
 import { ResumesScreen } from "../Resumes/ResumesScreen";
 import { AddResume } from "../Resumes/AddResume";
+import { EditResume } from "../Resumes/EditResume";
+import { ResumeDetail } from "../Resumes/ResumeDetail";
 
-// Token kontrol fonksiyonu (uygulamanıza göre düzenleyin)
 import { checkToken } from "../../Components/utils";
 
 const Drawer = createDrawerNavigator();
@@ -27,13 +28,11 @@ export function MyDrawer({ setIsLoggedIn }) {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
   useEffect(() => {
-    // Token kontrolü: Eğer token geçerli değilse, global durumu güncelliyoruz.
     const verifyToken = async () => {
       const tokenValid = await checkToken();
       if (!tokenValid) {
         console.warn("Token süresi dolmuş, kullanıcı çıkış yapıyor...");
         await AsyncStorage.removeItem("userToken");
-        // Reset işlemi yerine sadece global state'i güncelliyoruz.
         setIsLoggedIn(false);
       } else {
         setIsAuthenticated(true);
@@ -44,7 +43,6 @@ export function MyDrawer({ setIsLoggedIn }) {
   }, []);
 
   if (isAuthenticated === null) {
-    // Token kontrolü süresince yükleniyor ekranı
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -66,7 +64,7 @@ export function MyDrawer({ setIsLoggedIn }) {
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="Resumes" component={ResumesScreen} />
 
-      {/* Menüde görünmesi gerekmeyen ekranlar */}
+      {/* Menüde görünmesini istemediğiniz ekranlar */}
       <Drawer.Screen
         name="ProfileDetail"
         component={ProfileDetail}
@@ -82,15 +80,23 @@ export function MyDrawer({ setIsLoggedIn }) {
         component={AddResume}
         options={{ drawerItemStyle: { display: "none" } }}
       />
+      <Drawer.Screen
+        name="EditResume"
+        component={EditResume}
+        options={{ drawerItemStyle: { display: "none" } }}
+      />
+      <Drawer.Screen
+        name="ResumeDetail"
+        component={ResumeDetail}
+        options={{ drawerItemStyle: { display: "none" } }}
+      />
     </Drawer.Navigator>
   );
 }
 
-// Çıkış yapma butonu
 const ExitButton = ({ setIsLoggedIn }) => {
   const handleLogout = async () => {
     await AsyncStorage.removeItem("userToken");
-    // Global state'i güncelleyerek Login ekranına geçiş sağlanır.
     setIsLoggedIn(false);
   };
 

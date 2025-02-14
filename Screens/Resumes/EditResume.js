@@ -1,3 +1,4 @@
+// EditResume.js
 import React, { useState } from "react";
 import {
   View,
@@ -11,46 +12,50 @@ import {
   KeyboardAvoidingView,
   StyleSheet,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
-import { PostRealApi } from "../../Components/ApiService";
+import { PostRealApi, PutRealApi } from "../../Components/ApiService";
 
-export const AddResume = () => {
+export const EditResume = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  // Düzenlenecek özgeçmiş verisini parametre olarak alıyoruz.
+  const { resume } = route.params;
+
   const [loading, setLoading] = useState(false);
 
-  // Form alanlarımız. API şemasına göre bazı alan isimleri ve veri tipleri ayarlandı.
+  // İlk form verilerini, düzenlenecek resume'den alıyoruz.
   const initialFormState = {
-    registrationNumber: "",
-    firstName: "",
-    lastName: "",
-    gender: null,
-    phone: "",
-    email: "",
-    militaryStatus: null,
-    licenseClass: null,
-    experience: null,
-    jobSeeking: null,
-    address: "",
-    district: "",
-    province: "",
-    notes: "",
+    registrationNumber: resume.registrationNumber
+      ? resume.registrationNumber.toString()
+      : "",
+    firstName: resume.name || "",
+    lastName: resume.lastName || "",
+    gender: resume.gender || null,
+    phone: resume.telephone || "",
+    email: resume.email || "",
+    militaryStatus: resume.militaryServiceStatus || null,
+    licenseClass: resume.driversLicenseClass || null,
+    experience: resume.experienceStatus || null,
+    jobSeeking: resume.isLookingForJob || null,
+    address: resume.address || "",
+    district: resume.district || "",
+    province: resume.province || "",
+    notes: resume.notes || "",
   };
 
   const [form, setForm] = useState(initialFormState);
-  const [birthDate, setBirthDate] = useState(new Date());
+  const [birthDate, setBirthDate] = useState(new Date(resume.birthDate));
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [photoURI, setPhotoURI] = useState(null);
+  const [photoURI, setPhotoURI] = useState(null); // Yeni resim seçilirse
 
-  // Form güncelleme fonksiyonu
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Resmi base64'e dönüştürme
   const convertToBase64 = async (uri) => {
     try {
       const base64 = await FileSystem.readAsStringAsync(uri, {
@@ -63,7 +68,6 @@ export const AddResume = () => {
     }
   };
 
-  // Resim seçme fonksiyonu
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -76,7 +80,6 @@ export const AddResume = () => {
     }
   };
 
-  // Tarih seçici değişim fonksiyonu
   const onDateChange = (event, selectedDate) => {
     if (selectedDate) {
       setBirthDate(selectedDate);
@@ -84,55 +87,56 @@ export const AddResume = () => {
     setShowDatePicker(Platform.OS === "ios");
   };
 
-  // Form gönderme işlemi: API’nin beklediği alan isimleri ve tiplerine göre verileri dönüştürüyoruz.
   const handleSubmit = async () => {
     setLoading(true);
-    const photoBase64 = photoURI ? await convertToBase64(photoURI) : null;
+    // Eğer yeni bir fotoğraf seçildiyse onu base64'e dönüştürüyoruz; yoksa mevcut photoPath kullanılıyor.
+    const photoBase64 = photoURI
+      ? await convertToBase64(photoURI)
+      : resume.photoPath || null;
 
     const dataToSend = {
-      photoPath: photoBase64, // API 'photoPath' alanını bekliyor
-      registrationNumber: Number(form.registrationNumber), // sayıya çeviriyoruz
-      name: form.firstName, // 'firstName' alanını 'name' olarak gönderiyoruz
+      id: resume.id, // id bilgisini ekliyoruz
+      photoPath: photoBase64,
+      registrationNumber: Number(form.registrationNumber),
+      name: form.firstName,
       lastName: form.lastName,
       birthDate: birthDate.toISOString(),
-      gender: form.gender, // picker'dan alınan sayı değeri (1 veya 2)
-      telephone: form.phone, // 'phone' alanını 'telephone' olarak gönderiyoruz
+      gender: form.gender,
+      telephone: form.phone,
       email: form.email,
       address: form.address,
       district: form.district,
       province: form.province,
-      militaryServiceStatus: form.militaryStatus, // sayı değeri
-      driversLicenseClass: form.licenseClass, // sayı değeri
-      experienceStatus: form.experience, // sayı değeri
-      isLookingForJob: form.jobSeeking, // boolean
-      isAnsweredLookingForJobMail: false, // Varsayılan değer (örneğin false)
+      militaryServiceStatus: form.militaryStatus,
+      driversLicenseClass: form.licenseClass,
+      experienceStatus: form.experience,
+      isLookingForJob: form.jobSeeking,
+      isAnsweredLookingForJobMail: false,
       notes: form.notes,
     };
 
-    console.log("Gönderilecek veri:", dataToSend);
+    console.log("Güncellenecek veri:", dataToSend);
 
     try {
-      const result = await PostRealApi("Resume", dataToSend, navigation);
+      // API'ye PUT ya da POST isteği göndererek güncelleme yapabilirsiniz.
+      // Örneğin, API'niz PUT isteği bekliyorsa URL'yi Resume/{id} şeklinde düzenleyin.
+      const result = await PutRealApi("Resume", dataToSend, navigation);
+
       if (result) {
-        alert("Özgeçmiş başarıyla oluşturuldu.");
-        // Form sıfırlama işlemi
-        setForm(initialFormState);
-        setBirthDate(new Date());
-        setPhotoURI(null);
-        // Başarılı kayıttan sonra ResumesScreen'e yönlendiriyoruz:
+        alert("Özgeçmiş başarıyla güncellendi.");
         navigation.navigate("Resumes");
       } else {
-        alert("Özgeçmiş oluşturulurken hata oluştu.");
+        alert("Özgeçmiş güncellenirken hata oluştu.");
       }
     } catch (error) {
-      console.error("Submit hatası:", error);
+      console.error("Güncelleme hatası:", error);
       alert("Beklenmedik bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Seçenekler: Picker'larda API'nin beklediği veri tiplerine uygun sayısal ve boolean değerler kullanıyoruz.
+  // Örnek olarak, AddResume ile benzer picker seçenekleri kullanılabilir.
   const genderOptions = [
     { label: "Cinsiyet Seçin", value: null },
     { label: "Kadın", value: 1 },
@@ -189,13 +193,17 @@ export const AddResume = () => {
         <TouchableOpacity onPress={pickImage} style={styles.imagePickerButton}>
           <Text style={styles.imagePickerText}>📷 Fotoğraf Seç</Text>
         </TouchableOpacity>
-        {photoURI && (
+        {photoURI ? (
           <Image source={{ uri: photoURI }} style={styles.imagePreview} />
-        )}
+        ) : resume.photoPath ? (
+          <Image
+            source={{ uri: `data:image/png;base64,${resume.photoPath}` }}
+            style={styles.imagePreview}
+          />
+        ) : null}
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Yeni Özgeçmiş Ekle</Text>
-
+          <Text style={styles.title}>Özgeçmiş Düzenle</Text>
           <TextInput
             placeholder="Oda Sicil Numarası"
             value={form.registrationNumber}
@@ -345,7 +353,7 @@ export const AddResume = () => {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>✔ Özgeçmiş Ekle</Text>
+              <Text style={styles.submitButtonText}>Güncelle</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -420,4 +428,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddResume;
+export default EditResume;
