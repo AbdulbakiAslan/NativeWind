@@ -17,8 +17,8 @@ import { ProfileDetail } from "../Profiles/ProfileDetail";
 import { AddProfile } from "../Profiles/AddProfile";
 import { ResumesScreen } from "../Resumes/ResumesScreen";
 import { AddResume } from "../Resumes/AddResume";
-import { EditResume } from "../Resumes/EditResume";
 import { ResumeDetail } from "../Resumes/ResumeDetail";
+import EditResumeTabs from "../Resumes/Tabs/EditResumeTabs";
 
 import { checkToken } from "../../Components/utils";
 
@@ -82,9 +82,10 @@ export function MyDrawer({ setIsLoggedIn }) {
       />
       <Drawer.Screen
         name="EditResume"
-        component={EditResume}
+        component={EditResumeTabs}
         options={{ drawerItemStyle: { display: "none" } }}
       />
+
       <Drawer.Screen
         name="ResumeDetail"
         component={ResumeDetail}
