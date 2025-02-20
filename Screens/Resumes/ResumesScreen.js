@@ -95,7 +95,13 @@ export const ResumesScreen = () => {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {/* Düzenleme Butonu */}
           <TouchableOpacity
-            onPress={() => nav.navigate("EditResume", { resumeId: item.id })}
+            onPress={() => {
+              console.log(item.id);
+              nav.navigate("EditResume", {
+                screen: "GenelBilgiler",
+                params: { resume: item },
+              });
+            }}
           >
             <MaterialIcons name="edit" size={24} color="blue" />
           </TouchableOpacity>

@@ -32,7 +32,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
-          <Stack.Screen name="Main">
+          <Stack.Screen name="Home">
             {(props) => <MyDrawer {...props} setIsLoggedIn={setIsLoggedIn} />}
           </Stack.Screen>
         ) : (

@@ -19,7 +19,7 @@ const Tab = createMaterialTopTabNavigator();
 const EditResumeTabs = () => {
   // Navigator.js'den gelen "resume" parametresini alıyoruz
   const route = useRoute();
-  const { resume } = route.params;
+  const { resume } = route.params || {};
 
   return (
     <Tab.Navigator

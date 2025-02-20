@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,98 +7,116 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
-  StyleSheet,
   Platform,
+  KeyboardAvoidingView,
+  StyleSheet,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
-import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as FileSystem from "expo-file-system";
 import { GetRealApi, PutRealApi } from "../../../Components/ApiService";
 
 const GeneralInformation = () => {
   const route = useRoute();
   const navigation = useNavigation();
 
-  // route.params içinde "resumeId" veya "resume" gelebilir.
-  const { resume, resumeId } = route.params;
+  // route.params içindeki resumeId'yi alın ve varsayılan değeri belirleyin
+  const resumeFromParams = route.params?.resume;
+  const effectiveResumeId = resumeFromParams
+    ? resumeFromParams.id
+    : route.params?.resumeId || 1;
+  console.log("Using resumeId:", effectiveResumeId);
 
-  // API'den çekilen veya doğrudan gelen veriyi tutacak state
-  const [resumeData, setResumeData] = useState(resume || null);
+  // API'den çekilecek veriyi ve yüklenme durumunu tutan state'ler
+  const [resumeData, setResumeData] = useState(null);
   const [loadingResume, setLoadingResume] = useState(false);
 
-  useEffect(() => {
-    if (!resumeData && resumeId) {
-      async function fetchResumeById() {
-        const result = await GetRealApi(`Resume/${resumeId}`, navigation);
-        setResumeData(result);
-      }
-      fetchResumeById();
-    }
-  }, [resumeData, resumeId]);
+  // Form alanları, doğum tarihi, fotoğraf URI ve güncelleme durumu
+  const [form, setForm] = useState({});
+  const [birthDate, setBirthDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [photoURI, setPhotoURI] = useState(null);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
 
-  const fetchResumeById = async (id) => {
-    setLoadingResume(true);
+  // Sayfa açıldığında, effectiveResumeId'ye göre API'den veriyi çekiyoruz
+  useEffect(() => {
+    fetchResume(effectiveResumeId);
+  }, [effectiveResumeId]);
+
+  // GET isteği: /api/Resume/{id}
+  const fetchResume = async (id) => {
     try {
-      // Tekil kayıt: GET /api/Resume/{id}
+      setLoadingResume(true);
       const result = await GetRealApi(`Resume/${id}`, navigation);
-      console.log("Tekil resume:", result);
+      console.log("Fetched resume data:", result);
       if (result) {
-        setResumeData(result);
+        // Eğer API diziden döndürüyorsa, ilk elemanı kullanın
+        if (Array.isArray(result)) {
+          setResumeData(result[0]);
+          console.log("Using first element from array:", result[0]);
+        } else {
+          setResumeData(result);
+        }
+      } else {
+        console.warn("API'den boş sonuç döndü.");
       }
     } catch (error) {
-      console.error("Resume çekme hatası:", error);
+      console.error("Veri çekme hatası:", error);
     } finally {
       setLoadingResume(false);
     }
   };
 
-  if (loadingResume || !resumeData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
+  // resumeData geldiğinde form state'ini dolduralım
+  useEffect(() => {
+    if (resumeData) {
+      console.log("resumeData state güncellendi:", resumeData);
+      setForm({
+        registrationNumber: resumeData.registrationNumber
+          ? String(resumeData.registrationNumber)
+          : "",
+        firstName: resumeData.name || "",
+        lastName: resumeData.lastName || "",
+        gender: resumeData.gender || null,
+        phone: resumeData.telephone || "",
+        email: resumeData.email || "",
+        militaryStatus: resumeData.militaryServiceStatus || null,
+        licenseClass: resumeData.driversLicenseClass || null,
+        experience: resumeData.experienceStatus || null,
+        jobSeeking: resumeData.isLookingForJob || null,
+        address: resumeData.address || "",
+        district: resumeData.district || "",
+        province: resumeData.province || "",
+        notes: resumeData.notes || "",
+      });
+      if (resumeData.birthDate) {
+        setBirthDate(new Date(resumeData.birthDate));
+      }
+      setPhotoURI(null);
+    }
+  }, [resumeData]);
 
-  // Formu doldurmak için başlangıç verileri
-  const initialFormState = {
-    registrationNumber: resumeData.registrationNumber?.toString() || "",
-    firstName: resumeData.name || "",
-    lastName: resumeData.lastName || "",
-    gender: resumeData.gender || null,
-    phone: resumeData.telephone || "",
-    email: resumeData.email || "",
-    militaryStatus: resumeData.militaryServiceStatus || null,
-    licenseClass: resumeData.driversLicenseClass || null,
-    experience: resumeData.experienceStatus || null,
-    jobSeeking: resumeData.isLookingForJob || false,
-    address: resumeData.address || "",
-    district: resumeData.district || "",
-    province: resumeData.province || "",
-    notes: resumeData.notes || "",
-  };
-
-  // Form state
-  const [form, setForm] = useState(initialFormState);
-
-  // Tarih seçimi için ek state'ler
-  const [birthDate, setBirthDate] = useState(
-    resumeData.birthDate ? new Date(resumeData.birthDate) : new Date()
-  );
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  // Yeni fotoğraf seçilirse saklayacağımız URI
-  const [photoURI, setPhotoURI] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  // Form alanı değişimlerinde çalışan fonksiyon
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Resmi base64'e çeviren fonksiyon
+  // Fotoğraf seçme
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      console.log("Seçilen fotoğraf URI:", result.assets[0].uri);
+      setPhotoURI(result.assets[0].uri);
+    }
+  };
+
+  // Fotoğrafı base64'e dönüştürme
   const convertToBase64 = async (uri) => {
     try {
       return await FileSystem.readAsStringAsync(uri, {
@@ -110,43 +128,30 @@ const GeneralInformation = () => {
     }
   };
 
-  // Galeriden resim seçme
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setPhotoURI(result.assets[0].uri);
-    }
-  };
-
-  // DateTimePicker'da tarih seçimi
+  // Tarih seçimi
   const onDateChange = (event, selectedDate) => {
     if (selectedDate) {
+      console.log("Seçilen tarih:", selectedDate);
       setBirthDate(selectedDate);
     }
-    // iOS'ta picker açık kalmasın
     setShowDatePicker(Platform.OS === "ios");
   };
 
-  // PUT isteği ile güncelleme
+  // Güncelleme işlemi (PUT isteği)
   const handleSubmit = async () => {
-    setLoading(true);
     try {
-      const photoBase64 = photoURI
-        ? await convertToBase64(photoURI)
-        : resumeData.photoPath || null;
-
-      // birthDate ve notes alanlarını ekliyoruz
+      setLoadingSubmit(true);
+      let photoBase64 = resumeData?.photoPath || null;
+      if (photoURI) {
+        photoBase64 = await convertToBase64(photoURI);
+      }
       const dataToSend = {
         id: resumeData.id,
         photoPath: photoBase64,
         registrationNumber: Number(form.registrationNumber),
         name: form.firstName,
         lastName: form.lastName,
+        birthDate: birthDate.toISOString(),
         gender: form.gender,
         telephone: form.phone,
         email: form.email,
@@ -157,31 +162,27 @@ const GeneralInformation = () => {
         driversLicenseClass: form.licenseClass,
         experienceStatus: form.experience,
         isLookingForJob: form.jobSeeking,
-        // Eklediğimiz alanlar
-        birthDate: birthDate.toISOString(),
+        isAnsweredLookingForJobMail: false,
         notes: form.notes,
       };
-
-      console.log("PUT Gönderilen veri:", dataToSend);
-      // PUT /api/Resume
-      const result = await PutRealApi("Resume", dataToSend, navigation);
-
-      // API 204 döndüğünde result {} veya null olabilir. Başarılı sayabiliriz.
-      if (result !== null) {
-        alert("Özgeçmiş başarıyla güncellendi.");
-        navigation.navigate("Resumes");
+      console.log("Gönderilecek veri:", dataToSend);
+      const updated = await PutRealApi(`Resume/${resumeData.id}`, dataToSend);
+      console.log("Güncelleme sonucu:", updated);
+      if (updated) {
+        alert("Özgeçmiş güncellendi.");
+        navigation.goBack();
       } else {
-        alert("Özgeçmiş güncellenirken hata oluştu veya yanıt boş döndü.");
+        alert("Güncelleme sırasında hata oluştu.");
       }
     } catch (error) {
       console.error("Güncelleme hatası:", error);
       alert("Beklenmedik bir hata oluştu.");
     } finally {
-      setLoading(false);
+      setLoadingSubmit(false);
     }
   };
 
-  // Picker verileri (örnek)
+  // Picker seçenekleri
   const genderOptions = [
     { label: "Cinsiyet Seçin", value: null },
     { label: "Kadın", value: 1 },
@@ -206,7 +207,7 @@ const GeneralInformation = () => {
     { label: "E", value: 8 },
   ];
   const experienceOptions = [
-    { label: "Deneyim Seçin", value: null },
+    { label: "Deneyim Durumu Seçin", value: null },
     { label: "Deneyimi Yok", value: 0 },
     { label: "1 Yıl", value: 1 },
     { label: "2 Yıl", value: 2 },
@@ -220,208 +221,214 @@ const GeneralInformation = () => {
     { label: "10 Yıl ve Üzeri", value: 10 },
   ];
   const jobSeekingOptions = [
-    { label: "İş Arıyor mu?", value: false },
+    { label: "İş Arıyor mu?", value: null },
     { label: "Evet", value: true },
+    { label: "Hayır", value: false },
   ];
 
-  return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity onPress={pickImage} style={styles.imagePickerButton}>
-        <Text style={styles.imagePickerText}>📷 Fotoğraf Seç</Text>
-      </TouchableOpacity>
-      {photoURI ? (
-        <Image source={{ uri: photoURI }} style={styles.imagePreview} />
-      ) : resumeData.photoPath ? (
-        <Image
-          source={{ uri: `data:image/png;base64,${resumeData.photoPath}` }}
-          style={styles.imagePreview}
-        />
-      ) : null}
-
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Özgeçmiş Düzenle</Text>
-
-        <TextInput
-          placeholder="Oda Sicil Numarası"
-          value={form.registrationNumber}
-          onChangeText={(text) => handleChange("registrationNumber", text)}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="İsim"
-          value={form.firstName}
-          onChangeText={(text) => handleChange("firstName", text)}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Soyisim"
-          value={form.lastName}
-          onChangeText={(text) => handleChange("lastName", text)}
-          style={styles.input}
-        />
-
-        {/* Doğum Tarihi Seçimi */}
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text>Doğum Tarihi: {birthDate.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={birthDate}
-            mode="date"
-            display="default"
-            onChange={onDateChange}
-          />
-        )}
-
-        {/* Cinsiyet */}
-        <Picker
-          selectedValue={form.gender}
-          onValueChange={(v) => handleChange("gender", v)}
-          style={styles.picker}
-        >
-          {genderOptions.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-
-        {/* Telefon */}
-        <TextInput
-          placeholder="Telefon"
-          value={form.phone}
-          onChangeText={(text) => handleChange("phone", text)}
-          style={styles.input}
-        />
-
-        {/* Email */}
-        <TextInput
-          placeholder="Email"
-          value={form.email}
-          onChangeText={(text) => handleChange("email", text)}
-          style={styles.input}
-        />
-
-        {/* Askerlik Durumu */}
-        <Picker
-          selectedValue={form.militaryStatus}
-          onValueChange={(v) => handleChange("militaryStatus", v)}
-          style={styles.picker}
-        >
-          {militaryOptions.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-
-        {/* Sürücü Belgesi */}
-        <Picker
-          selectedValue={form.licenseClass}
-          onValueChange={(v) => handleChange("licenseClass", v)}
-          style={styles.picker}
-        >
-          {driversLicenseOptions.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-
-        {/* Deneyim */}
-        <Picker
-          selectedValue={form.experience}
-          onValueChange={(v) => handleChange("experience", v)}
-          style={styles.picker}
-        >
-          {experienceOptions.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-
-        {/* İş Arıyor mu? */}
-        <Picker
-          selectedValue={form.jobSeeking}
-          onValueChange={(v) => handleChange("jobSeeking", v)}
-          style={styles.picker}
-        >
-          {jobSeekingOptions.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
-
-        {/* Adres */}
-        <TextInput
-          placeholder="Adres"
-          value={form.address}
-          onChangeText={(text) => handleChange("address", text)}
-          style={styles.input}
-        />
-
-        {/* İlçe */}
-        <TextInput
-          placeholder="İlçe"
-          value={form.district}
-          onChangeText={(text) => handleChange("district", text)}
-          style={styles.input}
-        />
-
-        {/* İl */}
-        <TextInput
-          placeholder="İl"
-          value={form.province}
-          onChangeText={(text) => handleChange("province", text)}
-          style={styles.input}
-        />
-
-        {/* Notlar */}
-        <TextInput
-          placeholder="Notlar"
-          value={form.notes}
-          onChangeText={(text) => handleChange("notes", text)}
-          style={[styles.input, { height: 80 }]}
-          multiline
-        />
-
-        {/* Güncelle Butonu */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Güncelle</Text>
-          )}
-        </TouchableOpacity>
+  if (loadingResume) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
       </View>
-    </ScrollView>
+    );
+  }
+
+  if (!resumeData) {
+    return (
+      <View style={styles.center}>
+        <Text>Veri bulunamadı.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <TouchableOpacity onPress={pickImage} style={styles.button}>
+          <Text style={{ color: "#fff" }}>Fotoğraf Seç</Text>
+        </TouchableOpacity>
+
+        {photoURI ? (
+          <Image source={{ uri: photoURI }} style={styles.image} />
+        ) : resumeData.photoPath ? (
+          <Image
+            source={{ uri: `data:image/png;base64,${resumeData.photoPath}` }}
+            style={styles.image}
+          />
+        ) : null}
+
+        <View style={styles.form}>
+          <Text style={styles.title}>Özgeçmiş Düzenle</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Oda Sicil No"
+            value={form.registrationNumber}
+            onChangeText={(val) => handleChange("registrationNumber", val)}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="İsim"
+            value={form.firstName}
+            onChangeText={(val) => handleChange("firstName", val)}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Soyisim"
+            value={form.lastName}
+            onChangeText={(val) => handleChange("lastName", val)}
+          />
+
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text>{birthDate.toLocaleDateString()}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={birthDate}
+              mode="date"
+              onChange={onDateChange}
+            />
+          )}
+
+          <Picker
+            style={styles.picker}
+            selectedValue={form.gender}
+            onValueChange={(val) => handleChange("gender", val)}
+          >
+            {genderOptions.map((g) => (
+              <Picker.Item key={g.value} label={g.label} value={g.value} />
+            ))}
+          </Picker>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Telefon"
+            value={form.phone}
+            onChangeText={(val) => handleChange("phone", val)}
+            keyboardType="phone-pad"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={form.email}
+            onChangeText={(val) => handleChange("email", val)}
+            keyboardType="email-address"
+          />
+
+          <Picker
+            style={styles.picker}
+            selectedValue={form.militaryStatus}
+            onValueChange={(val) => handleChange("militaryStatus", val)}
+          >
+            {militaryOptions.map((m) => (
+              <Picker.Item key={m.value} label={m.label} value={m.value} />
+            ))}
+          </Picker>
+
+          <Picker
+            style={styles.picker}
+            selectedValue={form.licenseClass}
+            onValueChange={(val) => handleChange("licenseClass", val)}
+          >
+            {driversLicenseOptions.map((d) => (
+              <Picker.Item key={d.value} label={d.label} value={d.value} />
+            ))}
+          </Picker>
+
+          <Picker
+            style={styles.picker}
+            selectedValue={form.experience}
+            onValueChange={(val) => handleChange("experience", val)}
+          >
+            {experienceOptions.map((exp) => (
+              <Picker.Item
+                key={exp.value}
+                label={exp.label}
+                value={exp.value}
+              />
+            ))}
+          </Picker>
+
+          <Picker
+            style={styles.picker}
+            selectedValue={form.jobSeeking}
+            onValueChange={(val) => handleChange("jobSeeking", val)}
+          >
+            {jobSeekingOptions.map((j) => (
+              <Picker.Item key={j.value} label={j.label} value={j.value} />
+            ))}
+          </Picker>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Adres"
+            value={form.address}
+            onChangeText={(val) => handleChange("address", val)}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="İlçe"
+            value={form.district}
+            onChangeText={(val) => handleChange("district", val)}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="İl"
+            value={form.province}
+            onChangeText={(val) => handleChange("province", val)}
+          />
+
+          <TextInput
+            style={[styles.input, { height: 80 }]}
+            placeholder="Notlar"
+            value={form.notes}
+            onChangeText={(val) => handleChange("notes", val)}
+            multiline
+          />
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit}>
+            {loadingSubmit ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                Güncelle
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 export default GeneralInformation;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  loadingContainer: {
+  container: { flex: 1 },
+  scroll: { padding: 16 },
+  center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  imagePickerButton: {
-    backgroundColor: "#2563EB",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    alignItems: "center",
-  },
-  imagePickerText: { color: "#fff", fontWeight: "bold" },
-  imagePreview: {
-    width: 160,
-    height: 120,
-    borderRadius: 8,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  formContainer: {
+  form: {
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 8,
     elevation: 2,
+    marginTop: 16,
   },
   title: {
     fontSize: 18,
@@ -435,13 +442,6 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderRadius: 8,
-  },
-  datePickerButton: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
     backgroundColor: "#fff",
   },
   picker: {
@@ -451,16 +451,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: "#fff",
   },
-  submitButton: {
+  button: {
+    backgroundColor: "#2563EB",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveBtn: {
     backgroundColor: "#10B981",
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 16,
   },
-  submitButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
+  image: {
+    width: 160,
+    height: 120,
+    borderRadius: 8,
+    marginTop: 16,
+    alignSelf: "center",
   },
 });
