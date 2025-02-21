@@ -21,6 +21,7 @@ import { ResumeDetail } from "../Resumes/ResumeDetail";
 import EditResumeTabs from "../Resumes/Tabs/EditResumeTabs";
 
 import { checkToken } from "../../Components/utils";
+import { Login } from "../Login/Login";
 
 const Drawer = createDrawerNavigator();
 
@@ -65,6 +66,13 @@ export function MyDrawer({ setIsLoggedIn }) {
       <Drawer.Screen name="Resumes" component={ResumesScreen} />
 
       {/* Menüde görünmesini istemediğiniz ekranlar */}
+
+      <Drawer.Screen
+        name="Login"
+        component={Login}
+        options={{ drawerItemStyle: { display: "none" } }}
+      />
+
       <Drawer.Screen
         name="ProfileDetail"
         component={ProfileDetail}

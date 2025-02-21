@@ -1,5 +1,3 @@
-// ResumesScreen.js
-
 import * as React from "react";
 import {
   FlatList,
@@ -10,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons"; // İkonlar için
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { GetRealApi } from "../../Components/ApiService"; // Gerçek API
 import { checkTokenAndRedirect } from "../../Components/utils"; // Token kontrolü
 
@@ -22,10 +20,18 @@ export const ResumesScreen = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
 
+  // İlk açılışta token kontrolü ve verileri çek
   React.useEffect(() => {
     checkTokenAndRedirect(nav);
     fetchResumes();
   }, []);
+
+  // Ekran her odaklandığında verileri güncelle
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchResumes();
+    }, [])
+  );
 
   const fetchResumes = async () => {
     try {
