@@ -166,7 +166,7 @@ const GeneralInformation = () => {
         notes: form.notes,
       };
       console.log("Gönderilecek veri:", dataToSend);
-      const updated = await PutRealApi(`Resume/${resumeData.id}`, dataToSend);
+      const updated = await PutRealApi("Resume", dataToSend);
       console.log("Güncelleme sonucu:", updated);
       if (updated) {
         alert("Özgeçmiş güncellendi.");
