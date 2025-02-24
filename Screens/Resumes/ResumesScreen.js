@@ -1,4 +1,6 @@
-import * as React from "react";
+// ResumesScreen.js
+
+import React from "react";
 import {
   FlatList,
   RefreshControl,
@@ -6,11 +8,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert, // iOS/Android onay için Alert kullanabilirsiniz
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons"; // İkonlar için
+import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { GetRealApi } from "../../Components/ApiService"; // Gerçek API
-import { checkTokenAndRedirect } from "../../Components/utils"; // Token kontrolü
+import { GetRealApi, DeleteRealApi } from "../../Components/ApiService";
+import { checkTokenAndRedirect } from "../../Components/utils";
 
 export const ResumesScreen = () => {
   const nav = useNavigation();
@@ -20,13 +23,11 @@ export const ResumesScreen = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
 
-  // İlk açılışta token kontrolü ve verileri çek
   React.useEffect(() => {
     checkTokenAndRedirect(nav);
     fetchResumes();
   }, []);
 
-  // Ekran her odaklandığında verileri güncelle
   useFocusEffect(
     React.useCallback(() => {
       fetchResumes();
@@ -37,7 +38,6 @@ export const ResumesScreen = () => {
     try {
       setLoading(true);
       console.log("📡 API isteği gönderiliyor: /api/Resume");
-
       const realResumes = await GetRealApi("Resume", nav);
       if (realResumes === null) return;
 
@@ -48,7 +48,6 @@ export const ResumesScreen = () => {
         return;
       }
 
-      console.log("✅ API'den Gelen Özgeçmişler:", realResumes);
       setFetchedResumes(realResumes);
       setFilteredResumes(realResumes);
     } catch (error) {
@@ -70,13 +69,45 @@ export const ResumesScreen = () => {
       setFilteredResumes(fetchedResumes);
       return;
     }
-
     const filtered = fetchedResumes.filter((item) =>
       `${item.name} ${item.lastName} ${item.email}`
         .toLowerCase()
         .includes(text.toLowerCase())
     );
     setFilteredResumes(filtered);
+  };
+
+  // Silme işlemini yöneten fonksiyon
+  const handleDelete = async (resumeId) => {
+    if (!resumeId) return;
+
+    // Silme onayı isteyebilirsiniz
+    Alert.alert(
+      "Silme Onayı",
+      "Bu kaydı silmek istediğinize emin misiniz?",
+      [
+        {
+          text: "Vazgeç",
+          style: "cancel",
+        },
+        {
+          text: "Sil",
+          style: "destructive",
+          onPress: async () => {
+            // API isteği atarak kaydı silelim
+            const result = await DeleteRealApi(`Resume/${resumeId}`, nav);
+            if (result) {
+              alert("Kayıt başarıyla silindi.");
+              // Listeyi güncellemek için yeniden çekiyoruz
+              fetchResumes();
+            } else {
+              alert("Silme işlemi başarısız oldu.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // Her bir resume öğesini render eden fonksiyon
@@ -111,15 +142,18 @@ export const ResumesScreen = () => {
           >
             <MaterialIcons name="edit" size={24} color="blue" />
           </TouchableOpacity>
+
           {/* Silme Butonu */}
           <TouchableOpacity
             onPress={() => {
               console.log("Silinecek resume id:", item.id);
+              handleDelete(item.id); // Silme fonksiyonunu çağırıyoruz
             }}
           >
             <MaterialIcons name="delete" size={24} color="red" />
           </TouchableOpacity>
-          {/* Bilgi Butonu: resumeId parametresi gönderiliyor */}
+
+          {/* Bilgi Butonu */}
           <TouchableOpacity
             onPress={() => nav.navigate("ResumeDetail", { resumeId: item.id })}
           >
@@ -132,6 +166,7 @@ export const ResumesScreen = () => {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Arama ve Ekle Butonu */}
       <View
         style={{
           flexDirection: "row",
@@ -152,7 +187,6 @@ export const ResumesScreen = () => {
             borderRadius: 8,
           }}
         />
-        {/* Özgeçmiş ekleme butonu */}
         <TouchableOpacity
           style={{
             backgroundColor: "#3b82f6",
@@ -166,6 +200,7 @@ export const ResumesScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Liste */}
       <FlatList
         data={filteredResumes}
         renderItem={renderResumeItem}

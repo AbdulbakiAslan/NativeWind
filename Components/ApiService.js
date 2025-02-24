@@ -1,7 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CommonActions } from "@react-navigation/native";
-import { Login } from "../Screens/Login/Login";
-
 const baseUrl = "http://10.0.2.2:5237/api/"; // Gerçek API
 
 // Token'ı alacak fonksiyon
@@ -145,6 +143,43 @@ export async function PutRealApi(url, data, navigation) {
     return JSON.parse(text);
   } catch (error) {
     console.log("❌ Gerçek API PUT Hatası:", error);
+    return null;
+  }
+}
+
+// API DELETE Fonksiyonu (401 Kontrolü ile)
+
+export async function DeleteRealApi(url, navigation) {
+  try {
+    const apiUrl = baseUrl + url;
+    const token = await getToken();
+    const headers = token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json" };
+
+    console.log("📡 Gerçek API DELETE İsteği:", apiUrl);
+    console.log("🛠 Authorization Header:", headers);
+
+    const response = await fetch(apiUrl, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP Hatası: ${response.status}`);
+    }
+
+    // Başarılı ise, genelde 200 veya 204 gibi bir yanıt dönebilir.
+    console.log("✅ Silme işlemi başarılı:", await response.text());
+    return true;
+  } catch (error) {
+    console.log("❌ Gerçek API DELETE Hatası:", error);
     return null;
   }
 }
