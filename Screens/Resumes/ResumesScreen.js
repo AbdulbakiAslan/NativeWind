@@ -133,11 +133,7 @@ export const ResumesScreen = () => {
           {/* Düzenleme Butonu */}
           <TouchableOpacity
             onPress={() => {
-              console.log(item.id);
-              nav.navigate("EditResume", {
-                screen: "GenelBilgiler",
-                params: { resume: item },
-              });
+              nav.navigate("EditResume", { resume: item });
             }}
           >
             <MaterialIcons name="edit" size={24} color="blue" />

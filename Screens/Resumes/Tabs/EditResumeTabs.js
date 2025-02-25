@@ -1,5 +1,3 @@
-// Resumes/Tabs/EditResumeTabs.js
-
 import React from "react";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { useRoute } from "@react-navigation/native";
@@ -17,20 +15,22 @@ import Certificates from "./Certificates";
 const Tab = createMaterialTopTabNavigator();
 
 const EditResumeTabs = () => {
-  // Navigator.js'den gelen "resume" parametresini alıyoruz
   const route = useRoute();
-  const { resume } = route.params || {};
+  // Eğer parametre iç içe gönderildiyse onu da yakalayalım.
+  const resume = route.params?.resume || route.params?.params?.resume;
+
+  if (!resume || !resume.id) {
+    console.error("Hata: Geçerli resume bilgisi bulunamadı.", resume);
+  }
 
   return (
     <Tab.Navigator
       screenOptions={{
-        // Tab başlıklarının style ayarları
         tabBarLabelStyle: { fontSize: 12, fontWeight: "bold" },
         tabBarIndicatorStyle: { backgroundColor: "#ff0000" },
         tabBarScrollEnabled: true,
       }}
     >
-      {/* Her sekme için bir Screen tanımlıyoruz */}
       <Tab.Screen
         name="GenelBilgiler"
         component={GeneralInformation}

@@ -183,3 +183,146 @@ export async function DeleteRealApi(url, navigation) {
     return null;
   }
 }
+
+/**
+ * 1) Eğitim Listesini Getir
+ * GET /api/Education
+ */
+export async function getEducationList(navigation) {
+  try {
+    const token = await getToken();
+    const apiUrl = `${baseUrl}Education`; // => /api/Education
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
+    console.log("📡 GET =>", apiUrl);
+
+    const response = await fetch(apiUrl, { headers });
+
+    // 401 ise kullanıcıyı çıkışa yönlendir
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    // Başarısız yanıt
+    if (!response.ok) {
+      console.error(`❌ GET Hatası: HTTP ${response.status}`);
+      return null;
+    }
+
+    const textData = await response.text();
+    if (!textData) {
+      console.warn("⚠️ API boş yanıt döndürdü!");
+      return null;
+    }
+
+    // JSON parse et ve döndür
+    return JSON.parse(textData);
+  } catch (error) {
+    console.error("❌ GET EducationList Hatası:", error);
+    return null;
+  }
+}
+
+/**
+ * 2) Yeni Eğitim Bilgisi Ekle
+ * POST /api/Education
+ */
+export async function addEducation(navigation, educationData) {
+  try {
+    const token = await getToken();
+    const apiUrl = `${baseUrl}Education`; // => /api/Education
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
+    console.log("📡 POST =>", apiUrl);
+    console.log("📦 Gönderilen Veri:", educationData);
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(educationData),
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP Hatası: ${response.status}`);
+    }
+
+    const textData = await response.text();
+    if (!textData) {
+      console.warn("⚠️ API boş yanıt döndürdü!");
+      return null;
+    }
+
+    return JSON.parse(textData);
+  } catch (error) {
+    console.error("❌ POST Education Hatası:", error);
+    return null;
+  }
+}
+
+/**
+ * 3) Mevcut Eğitim Bilgisini Güncelle
+ * PUT /api/Education
+ */
+export async function updateEducation(navigation, educationData) {
+  try {
+    const token = await getToken();
+    const apiUrl = `${baseUrl}Education`; // => /api/Education
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
+    console.log("📡 PUT =>", apiUrl);
+    console.log("📦 Gönderilen Veri:", educationData);
+
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(educationData),
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP Hatası: ${response.status}`);
+    }
+
+    // Bazı API'ler 204 (No Content) döndürebilir
+    if (response.status === 204) {
+      console.log("📡 API başarıyla güncellendi (204). İçerik yok.");
+      return {};
+    }
+
+    const textData = await response.text();
+    if (!textData) {
+      console.log("📡 API başarıyla güncellendi, ancak içerik boş.");
+      return {};
+    }
+
+    return JSON.parse(textData);
+  } catch (error) {
+    console.error("❌ PUT Education Hatası:", error);
+    return null;
+  }
+}
