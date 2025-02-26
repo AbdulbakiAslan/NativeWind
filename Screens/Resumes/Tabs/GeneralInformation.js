@@ -11,48 +11,41 @@ import {
   KeyboardAvoidingView,
   StyleSheet,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
 import { GetRealApi, PutRealApi } from "../../../Components/ApiService";
 
-const GeneralInformation = () => {
-  const route = useRoute();
+const GeneralInformation = (props) => {
+  const { resume } = props;
   const navigation = useNavigation();
 
-  // route.params içindeki resumeId'yi alın ve varsayılan değeri belirleyin
-  const resumeFromParams = route.params?.resume;
-  const effectiveResumeId = resumeFromParams
-    ? resumeFromParams.id
-    : route.params?.resumeId || 1;
+  const effectiveResumeId = resume?.id;
   console.log("Using resumeId:", effectiveResumeId);
 
-  // API'den çekilecek veriyi ve yüklenme durumunu tutan state'ler
   const [resumeData, setResumeData] = useState(null);
   const [loadingResume, setLoadingResume] = useState(false);
 
-  // Form alanları, doğum tarihi, fotoğraf URI ve güncelleme durumu
   const [form, setForm] = useState({});
   const [birthDate, setBirthDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [photoURI, setPhotoURI] = useState(null);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
 
-  // Sayfa açıldığında, effectiveResumeId'ye göre API'den veriyi çekiyoruz
   useEffect(() => {
-    fetchResume(effectiveResumeId);
+    if (effectiveResumeId) {
+      fetchResume(effectiveResumeId);
+    }
   }, [effectiveResumeId]);
 
-  // GET isteği: /api/Resume/{id}
   const fetchResume = async (id) => {
     try {
       setLoadingResume(true);
       const result = await GetRealApi(`Resume/${id}`, navigation);
       console.log("Fetched resume data:", result);
       if (result) {
-        // Eğer API diziden döndürüyorsa, ilk elemanı kullanın
         if (Array.isArray(result)) {
           setResumeData(result[0]);
           console.log("Using first element from array:", result[0]);
@@ -69,7 +62,6 @@ const GeneralInformation = () => {
     }
   };
 
-  // resumeData geldiğinde form state'ini dolduralım
   useEffect(() => {
     if (resumeData) {
       console.log("resumeData state güncellendi:", resumeData);
@@ -102,7 +94,7 @@ const GeneralInformation = () => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Fotoğraf seçme
+  // Fotoğraf seçme fonksiyonu
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -182,50 +174,6 @@ const GeneralInformation = () => {
     }
   };
 
-  // Picker seçenekleri
-  const genderOptions = [
-    { label: "Cinsiyet Seçin", value: null },
-    { label: "Kadın", value: 1 },
-    { label: "Erkek", value: 2 },
-  ];
-  const militaryOptions = [
-    { label: "Askerlik Durumu Seçin", value: null },
-    { label: "Muaf", value: 1 },
-    { label: "Tecili", value: 2 },
-    { label: "Yapıldı", value: 3 },
-    { label: "Yapılıyor", value: 4 },
-  ];
-  const driversLicenseOptions = [
-    { label: "Sürücü Belgesi Seçin", value: null },
-    { label: "A", value: 1 },
-    { label: "A1", value: 2 },
-    { label: "A2", value: 3 },
-    { label: "B", value: 4 },
-    { label: "B2", value: 5 },
-    { label: "C", value: 6 },
-    { label: "D", value: 7 },
-    { label: "E", value: 8 },
-  ];
-  const experienceOptions = [
-    { label: "Deneyim Durumu Seçin", value: null },
-    { label: "Deneyimi Yok", value: 0 },
-    { label: "1 Yıl", value: 1 },
-    { label: "2 Yıl", value: 2 },
-    { label: "3 Yıl", value: 3 },
-    { label: "4 Yıl", value: 4 },
-    { label: "5 Yıl", value: 5 },
-    { label: "6 Yıl", value: 6 },
-    { label: "7 Yıl", value: 7 },
-    { label: "8 Yıl", value: 8 },
-    { label: "9 Yıl", value: 9 },
-    { label: "10 Yıl ve Üzeri", value: 10 },
-  ];
-  const jobSeekingOptions = [
-    { label: "İş Arıyor mu?", value: null },
-    { label: "Evet", value: true },
-    { label: "Hayır", value: false },
-  ];
-
   if (loadingResume) {
     return (
       <View style={styles.center}>
@@ -304,9 +252,9 @@ const GeneralInformation = () => {
             selectedValue={form.gender}
             onValueChange={(val) => handleChange("gender", val)}
           >
-            {genderOptions.map((g) => (
-              <Picker.Item key={g.value} label={g.label} value={g.value} />
-            ))}
+            <Picker.Item label="Cinsiyet Seçin" value={null} />
+            <Picker.Item label="Kadın" value={1} />
+            <Picker.Item label="Erkek" value={2} />
           </Picker>
 
           <TextInput
@@ -330,9 +278,11 @@ const GeneralInformation = () => {
             selectedValue={form.militaryStatus}
             onValueChange={(val) => handleChange("militaryStatus", val)}
           >
-            {militaryOptions.map((m) => (
-              <Picker.Item key={m.value} label={m.label} value={m.value} />
-            ))}
+            <Picker.Item label="Askerlik Durumu Seçin" value={null} />
+            <Picker.Item label="Muaf" value={1} />
+            <Picker.Item label="Tecili" value={2} />
+            <Picker.Item label="Yapıldı" value={3} />
+            <Picker.Item label="Yapılıyor" value={4} />
           </Picker>
 
           <Picker
@@ -340,9 +290,15 @@ const GeneralInformation = () => {
             selectedValue={form.licenseClass}
             onValueChange={(val) => handleChange("licenseClass", val)}
           >
-            {driversLicenseOptions.map((d) => (
-              <Picker.Item key={d.value} label={d.label} value={d.value} />
-            ))}
+            <Picker.Item label="Sürücü Belgesi Seçin" value={null} />
+            <Picker.Item label="A" value={1} />
+            <Picker.Item label="A1" value={2} />
+            <Picker.Item label="A2" value={3} />
+            <Picker.Item label="B" value={4} />
+            <Picker.Item label="B2" value={5} />
+            <Picker.Item label="C" value={6} />
+            <Picker.Item label="D" value={7} />
+            <Picker.Item label="E" value={8} />
           </Picker>
 
           <Picker
@@ -350,13 +306,18 @@ const GeneralInformation = () => {
             selectedValue={form.experience}
             onValueChange={(val) => handleChange("experience", val)}
           >
-            {experienceOptions.map((exp) => (
-              <Picker.Item
-                key={exp.value}
-                label={exp.label}
-                value={exp.value}
-              />
-            ))}
+            <Picker.Item label="Deneyim Durumu Seçin" value={null} />
+            <Picker.Item label="Deneyimi Yok" value={0} />
+            <Picker.Item label="1 Yıl" value={1} />
+            <Picker.Item label="2 Yıl" value={2} />
+            <Picker.Item label="3 Yıl" value={3} />
+            <Picker.Item label="4 Yıl" value={4} />
+            <Picker.Item label="5 Yıl" value={5} />
+            <Picker.Item label="6 Yıl" value={6} />
+            <Picker.Item label="7 Yıl" value={7} />
+            <Picker.Item label="8 Yıl" value={8} />
+            <Picker.Item label="9 Yıl" value={9} />
+            <Picker.Item label="10 Yıl ve Üzeri" value={10} />
           </Picker>
 
           <Picker
@@ -364,9 +325,9 @@ const GeneralInformation = () => {
             selectedValue={form.jobSeeking}
             onValueChange={(val) => handleChange("jobSeeking", val)}
           >
-            {jobSeekingOptions.map((j) => (
-              <Picker.Item key={j.value} label={j.label} value={j.value} />
-            ))}
+            <Picker.Item label="İş Arıyor mu?" value={null} />
+            <Picker.Item label="Evet" value={true} />
+            <Picker.Item label="Hayır" value={false} />
           </Picker>
 
           <TextInput
@@ -418,11 +379,7 @@ export default GeneralInformation;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 16 },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   form: {
     backgroundColor: "#fff",
     padding: 16,

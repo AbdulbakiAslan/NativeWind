@@ -1,22 +1,25 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { View, Text } from "react-native";
 
-const LanguageInfo = () => {
-  const route = useRoute();
-  const { resume } = route.params;
+const LanguageInfo = (props) => {
+  // useRoute() yerine props üzerinden resume bilgisini alıyoruz
+  const { resume } = props;
+
+  if (!resume) {
+    return (
+      <View>
+        <Text>Resume verisi bulunamadı.</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Dil Bilgileri Sekmesi</Text>
-      {/* Örnek: <Text>{JSON.stringify(resume)}</Text> */}
+    <View>
+      <Text>Resume ID: {resume.id}</Text>
+      <Text>{resume.name} için dil bilgileri burada gösterilecek.</Text>
+      {/* Diğer dil bilgisi elemanlarınız */}
     </View>
   );
 };
 
 export default LanguageInfo;
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  text: { fontSize: 16, fontWeight: "bold" },
-});

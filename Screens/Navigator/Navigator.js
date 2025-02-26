@@ -91,7 +91,10 @@ export function MyDrawer({ setIsLoggedIn }) {
       <Drawer.Screen
         name="EditResume"
         component={EditResumeTabs}
-        options={{ drawerItemStyle: { display: "none" } }}
+        options={{
+          drawerItemStyle: { display: "none" },
+          unmountOnBlur: true, // Ekrandan çıkınca unmount et
+        }}
       />
 
       <Drawer.Screen

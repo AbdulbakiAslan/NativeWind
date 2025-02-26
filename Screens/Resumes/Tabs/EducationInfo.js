@@ -11,7 +11,6 @@ import {
   Button,
   StyleSheet,
 } from "react-native";
-import { useRoute } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import {
   GetRealApi,
@@ -20,14 +19,10 @@ import {
   PutRealApi,
 } from "../../../Components/ApiService";
 
-const EducationInfo = () => {
-  const route = useRoute();
-  // Sadece route parametrelerinden gelen resume objesini kullanıyoruz
-  const resumeFromParams = route.params?.resume;
-  // Sadece resume objesinin id'sini alıyoruz; fallback kullanmıyoruz
-  const effectiveResumeId = resumeFromParams?.id || route.params?.resumeId;
+const EducationInfo = (props) => {
+  const { resume } = props;
+  const effectiveResumeId = resume?.id;
 
-  // Eğer geçerli resumeId bulunamazsa, hata ekranı gösteriyoruz
   if (!effectiveResumeId) {
     return (
       <View style={styles.center}>
@@ -94,7 +89,7 @@ const EducationInfo = () => {
       educationInfo: form.educationInfo,
       startYear: Number(form.startYear),
       endYear: Number(form.endYear),
-      resumeId: effectiveResumeId, // Geçerli resumeId gönderiliyor
+      resumeId: effectiveResumeId,
     };
 
     console.log("Gönderilen Payload:", payload);
@@ -225,6 +220,8 @@ const EducationInfo = () => {
   );
 };
 
+export default EducationInfo;
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -266,5 +263,3 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-
-export default EducationInfo;

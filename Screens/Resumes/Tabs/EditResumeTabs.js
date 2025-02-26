@@ -2,7 +2,7 @@ import React from "react";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { useRoute } from "@react-navigation/native";
 
-// Sekme bileşenlerini import edin
+// Tüm sekme bileşenlerini içe aktarıyoruz
 import GeneralInformation from "./GeneralInformation";
 import EducationInfo from "./EducationInfo";
 import LanguageInfo from "./LanguageInfo";
@@ -16,69 +16,57 @@ const Tab = createMaterialTopTabNavigator();
 
 const EditResumeTabs = () => {
   const route = useRoute();
-  // Eğer parametre iç içe gönderildiyse onu da yakalayalım.
-  const resume = route.params?.resume || route.params?.params?.resume;
+  const resume = route.params?.resume;
 
-  if (!resume || !resume.id) {
-    console.error("Hata: Geçerli resume bilgisi bulunamadı.", resume);
-  }
+  // Resume değiştiğinde Navigator'a farklı key vererek yeniden mount edilmesini sağlıyoruz.
+  const key = `EditResumeTabs-${resume ? resume.id : "default"}`;
 
   return (
     <Tab.Navigator
+      key={key}
       screenOptions={{
         tabBarLabelStyle: { fontSize: 12, fontWeight: "bold" },
         tabBarIndicatorStyle: { backgroundColor: "#ff0000" },
         tabBarScrollEnabled: true,
+        unmountOnBlur: true,
       }}
     >
       <Tab.Screen
         name="GenelBilgiler"
-        component={GeneralInformation}
         options={{ tabBarLabel: "Genel Bilgiler" }}
-        initialParams={{ resume }}
-      />
+      >
+        {(props) => <GeneralInformation {...props} resume={resume} />}
+      </Tab.Screen>
       <Tab.Screen
         name="Education"
-        component={EducationInfo}
         options={{ tabBarLabel: "Eğitim Bilgileri" }}
-        initialParams={{ resume }}
-      />
-      <Tab.Screen
-        name="Language"
-        component={LanguageInfo}
-        options={{ tabBarLabel: "Dil Bilgileri" }}
-        initialParams={{ resume }}
-      />
+      >
+        {(props) => <EducationInfo {...props} resume={resume} />}
+      </Tab.Screen>
+      <Tab.Screen name="Language" options={{ tabBarLabel: "Dil Bilgileri" }}>
+        {(props) => <LanguageInfo {...props} resume={resume} />}
+      </Tab.Screen>
       <Tab.Screen
         name="WorkExperience"
-        component={WorkExperience}
         options={{ tabBarLabel: "İş Deneyimleri" }}
-        initialParams={{ resume }}
-      />
+      >
+        {(props) => <WorkExperience {...props} resume={resume} />}
+      </Tab.Screen>
       <Tab.Screen
         name="ComputerSkills"
-        component={ComputerSkills}
-        options={{ tabBarLabel: "Bilgisayar Bilgisi" }}
-        initialParams={{ resume }}
-      />
-      <Tab.Screen
-        name="References"
-        component={References}
-        options={{ tabBarLabel: "Referanslar" }}
-        initialParams={{ resume }}
-      />
-      <Tab.Screen
-        name="Courses"
-        component={Courses}
-        options={{ tabBarLabel: "Kurslar" }}
-        initialParams={{ resume }}
-      />
-      <Tab.Screen
-        name="Certificates"
-        component={Certificates}
-        options={{ tabBarLabel: "Sertifikalar" }}
-        initialParams={{ resume }}
-      />
+        options={{ tabBarLabel: "Bilgisayar Becerileri" }}
+      >
+        {(props) => <ComputerSkills {...props} resume={resume} />}
+      </Tab.Screen>
+      <Tab.Screen name="References" options={{ tabBarLabel: "Referanslar" }}>
+        {(props) => <References {...props} resume={resume} />}
+      </Tab.Screen>
+      <Tab.Screen name="Courses" options={{ tabBarLabel: "Kurslar" }}>
+        {(props) => <Courses {...props} resume={resume} />}
+      </Tab.Screen>
+      <Tab.Screen name="Certificates" options={{ tabBarLabel: "Sertifikalar" }}>
+        {(props) => <Certificates {...props} resume={resume} />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 };

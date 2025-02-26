@@ -1,15 +1,22 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useRoute } from "@react-navigation/native";
 
-const References = () => {
-  const route = useRoute();
-  const { resume } = route.params;
+const References = (props) => {
+  const { resume } = props;
+
+  if (!resume) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>Resume verisi eksik.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Referanslar Sekmesi</Text>
-      {/* Örnek: <Text>{JSON.stringify(resume)}</Text> */}
+      <Text>Resume ID: {resume.id}</Text>
+      {/* Referans detaylarını burada gösterebilirsiniz */}
     </View>
   );
 };

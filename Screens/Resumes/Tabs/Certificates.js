@@ -1,15 +1,22 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useRoute } from "@react-navigation/native";
 
-const Certificates = () => {
-  const route = useRoute();
-  const { resume } = route.params;
+const Certificates = (props) => {
+  const { resume } = props;
+
+  if (!resume) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>Resume verisi eksik.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Sertifikalar Sekmesi</Text>
-      {/* Örnek: <Text>{JSON.stringify(resume)}</Text> */}
+      <Text>Resume ID: {resume.id}</Text>
+      {/* İstenirse resume verisi burada detaylandırılabilir */}
     </View>
   );
 };

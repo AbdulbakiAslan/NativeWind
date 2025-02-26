@@ -1,5 +1,3 @@
-// ResumesScreen.js
-
 import React from "react";
 import {
   FlatList,
@@ -8,7 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert, // iOS/Android onay için Alert kullanabilirsiniz
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -37,12 +35,11 @@ export const ResumesScreen = () => {
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      console.log("📡 API isteği gönderiliyor: /api/Resume");
       const realResumes = await GetRealApi("Resume", nav);
       if (realResumes === null) return;
 
       if (!Array.isArray(realResumes)) {
-        console.error("❌ API beklenen formatta veri döndürmedi.");
+        console.error("API beklenen formatta veri döndürmedi.");
         setFetchedResumes([]);
         setFilteredResumes([]);
         return;
@@ -51,7 +48,7 @@ export const ResumesScreen = () => {
       setFetchedResumes(realResumes);
       setFilteredResumes(realResumes);
     } catch (error) {
-      console.error("❌ Özgeçmişleri çekerken hata:", error);
+      console.error("Özgeçmişleri çekerken hata:", error);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -77,28 +74,20 @@ export const ResumesScreen = () => {
     setFilteredResumes(filtered);
   };
 
-  // Silme işlemini yöneten fonksiyon
   const handleDelete = async (resumeId) => {
     if (!resumeId) return;
-
-    // Silme onayı isteyebilirsiniz
     Alert.alert(
       "Silme Onayı",
       "Bu kaydı silmek istediğinize emin misiniz?",
       [
-        {
-          text: "Vazgeç",
-          style: "cancel",
-        },
+        { text: "Vazgeç", style: "cancel" },
         {
           text: "Sil",
           style: "destructive",
           onPress: async () => {
-            // API isteği atarak kaydı silelim
             const result = await DeleteRealApi(`Resume/${resumeId}`, nav);
             if (result) {
               alert("Kayıt başarıyla silindi.");
-              // Listeyi güncellemek için yeniden çekiyoruz
               fetchResumes();
             } else {
               alert("Silme işlemi başarısız oldu.");
@@ -110,7 +99,6 @@ export const ResumesScreen = () => {
     );
   };
 
-  // Her bir resume öğesini render eden fonksiyon
   const renderResumeItem = ({ item }) => {
     return (
       <View
@@ -130,26 +118,20 @@ export const ResumesScreen = () => {
           <Text style={{ fontSize: 14, color: "#6b7280" }}>{item.email}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          {/* Düzenleme Butonu */}
+          {/* Düzenleme Butonu*/}
           <TouchableOpacity
             onPress={() => {
+              console.log("Editing resume with id:", item.id);
               nav.navigate("EditResume", { resume: item });
             }}
           >
             <MaterialIcons name="edit" size={24} color="blue" />
           </TouchableOpacity>
 
-          {/* Silme Butonu */}
-          <TouchableOpacity
-            onPress={() => {
-              console.log("Silinecek resume id:", item.id);
-              handleDelete(item.id); // Silme fonksiyonunu çağırıyoruz
-            }}
-          >
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
             <MaterialIcons name="delete" size={24} color="red" />
           </TouchableOpacity>
 
-          {/* Bilgi Butonu */}
           <TouchableOpacity
             onPress={() => nav.navigate("ResumeDetail", { resumeId: item.id })}
           >

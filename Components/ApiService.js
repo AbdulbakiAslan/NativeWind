@@ -28,9 +28,6 @@ export async function GetRealApi(url, navigation) {
       ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
       : { "Content-Type": "application/json" };
 
-    console.log("📡 Gerçek API GET İsteği:", apiUrl);
-    console.log("🛠 Authorization Header:", headers);
-
     const response = await fetch(apiUrl, { headers });
 
     if (response.status === 401) {
