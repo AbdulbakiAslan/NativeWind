@@ -19,8 +19,7 @@ import {
   PutRealApi,
 } from "../../../Components/ApiService";
 
-const EducationInfo = (props) => {
-  const { resume } = props;
+const EducationInfo = ({ resume }) => {
   const effectiveResumeId = resume?.id;
 
   if (!effectiveResumeId) {
@@ -38,6 +37,7 @@ const EducationInfo = (props) => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({
+    id: null,
     schoolName: "",
     educationInfo: "",
     startYear: "",
@@ -62,7 +62,7 @@ const EducationInfo = (props) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     Alert.alert("Silme Onayı", "Bu kaydı silmek istediğinize emin misiniz?", [
       { text: "İptal", style: "cancel" },
       {
@@ -82,9 +82,9 @@ const EducationInfo = (props) => {
   };
 
   const handleSubmit = async () => {
-    const apiMethod = form.id ? PutRealApi : PostRealApi;
-    const endpoint = form.id ? `Education/${form.id}` : "Education";
+    // Swagger dokümanına uygun olarak PUT işlemi için id body'de gönderilecek
     const payload = {
+      id: form.id, // Eğer id varsa güncelleme, yoksa ekleme yapılacak
       schoolName: form.schoolName,
       educationInfo: form.educationInfo,
       startYear: Number(form.startYear),
@@ -92,14 +92,24 @@ const EducationInfo = (props) => {
       resumeId: effectiveResumeId,
     };
 
-    console.log("Gönderilen Payload:", payload);
+    let result;
+    if (form.id) {
+      // Güncelleme işlemi: endpoint'te id yok, body'de id gönderiliyor
+      result = await PutRealApi("Education", payload);
+    } else {
+      // Yeni kayıt ekleme işlemi
+      result = await PostRealApi("Education", payload);
+    }
 
-    const result = await apiMethod(endpoint, payload);
     if (result) {
-      Alert.alert("Başarılı", "Eğitim bilgisi kaydedildi");
+      Alert.alert(
+        "Başarılı",
+        `Eğitim bilgisi ${form.id ? "güncellendi" : "eklendi"}`
+      );
       fetchEducation(effectiveResumeId);
       setModalVisible(false);
       setForm({
+        id: null,
         schoolName: "",
         educationInfo: "",
         startYear: "",
@@ -120,7 +130,13 @@ const EducationInfo = (props) => {
       <View style={styles.iconContainer}>
         <TouchableOpacity
           onPress={() => {
-            setForm(item);
+            setForm({
+              id: item.id,
+              schoolName: item.schoolName,
+              educationInfo: item.educationInfo,
+              startYear: item.startYear.toString(),
+              endYear: item.endYear.toString(),
+            });
             setModalVisible(true);
           }}
         >
@@ -145,7 +161,16 @@ const EducationInfo = (props) => {
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          setForm({
+            id: null,
+            schoolName: "",
+            educationInfo: "",
+            startYear: "",
+            endYear: "",
+          });
+          setModalVisible(true);
+        }}
       >
         <Text style={styles.addButtonText}>+ Ekle</Text>
       </TouchableOpacity>
@@ -206,6 +231,7 @@ const EducationInfo = (props) => {
               onPress={() => {
                 setModalVisible(false);
                 setForm({
+                  id: null,
                   schoolName: "",
                   educationInfo: "",
                   startYear: "",
