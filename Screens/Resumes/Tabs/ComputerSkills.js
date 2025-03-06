@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 
-// Projenizdeki API servis fonksiyonları
+// API fonksiyonlarınız
 import {
   GetRealApi,
   PostRealApi,
@@ -24,7 +24,7 @@ import {
 const ComputerSkills = ({ resume }) => {
   const effectiveResumeId = resume?.id;
 
-  // Eğer Resume ID yoksa uyarı veriyoruz
+  // Resume ID yoksa uyarı
   if (!effectiveResumeId) {
     return (
       <View style={styles.center}>
@@ -35,24 +35,35 @@ const ComputerSkills = ({ resume }) => {
     );
   }
 
-  // Ekranda gösterilecek bilgisayar becerileri
+  // Sunucudan gelen bilgisayar becerisi kayıtları
+  // Ör: [{ id:2, computerSkillType:"ReactNative", level:"***", resumeId:1 }, ...]
   const [computerSkillsData, setComputerSkillsData] = useState([]);
-  // Becerilerin türlerini saklamak için
+  // Bilgisayar becerisi türleri
+  // Ör: [{ id:4, text:"Excel" }, { id:5, text:"Sap2000" }, ...]
   const [computerSkillTypes, setComputerSkillTypes] = useState([]);
-  // Yükleniyor mu kontrolü
+  // Yükleniyor mu?
   const [loading, setLoading] = useState(false);
   // Modal görünürlük
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Form state (yeni veya düzenlenecek bilgisayar becerisi)
+  // Form state (ekleme / düzenleme)
+  // Burada, sunucu POST/PUT'ta "computerSkillTypeId" (int) ve "level" (int) bekliyor.
   const [form, setForm] = useState({
-    id: null,
-    computerSkillTypeId: null,
-    level: null, // 1-5 arası seviye
+    id: null,                   // Kayıt ID'si (düzenleme varsa)
+    computerSkillTypeId: null, // Seçilen beceri türünün ID'si
+    level: null,               // Seviye (1-5) integer
     resumeId: effectiveResumeId,
   });
 
-  // Sayfa açıldığında / resumeId değiştiğinde verileri çek
+  // 1-5 arası integer değerleri Picker’da göstermek için
+  const levelOptions = [
+    { label: "* (1)", value: 1 },
+    { label: "** (2)", value: 2 },
+    { label: "*** (3)", value: 3 },
+    { label: "**** (4)", value: 4 },
+    { label: "***** (5)", value: 5 },
+  ];
+
   useEffect(() => {
     fetchComputerSkills(effectiveResumeId);
     fetchComputerSkillTypes();
@@ -62,10 +73,17 @@ const ComputerSkills = ({ resume }) => {
   const fetchComputerSkills = async (resumeId) => {
     try {
       setLoading(true);
-      // GET /api/ComputerSkill?resumeId={resumeId}
+      // GET /api/ComputerSkill?resumeId=1
+      // Örnek cevap: 
+      // [
+      //   { "id":2, "computerSkillType":"ReactNative", "level":"***", "resumeId":1 },
+      //   { "id":3, "computerSkillType":"Excel",       "level":"***", "resumeId":1 },
+      //   ...
+      // ]
       const result = await GetRealApi(`ComputerSkill?resumeId=${resumeId}`);
       if (Array.isArray(result)) {
-        setComputerSkillsData(result.filter((item) => item.resumeId === resumeId));
+        // Yalnızca ilgili resumeId'ye ait kayıtları filtrele
+        setComputerSkillsData(result.filter((item) => item.resumeId == resumeId));
       } else {
         console.warn("API'den bilgisayar becerisi verisi boş veya hatalı döndü.");
       }
@@ -80,6 +98,8 @@ const ComputerSkills = ({ resume }) => {
   const fetchComputerSkillTypes = async () => {
     try {
       // GET /api/ComputerSkillType
+      // Örnek cevap:
+      // [ { "id":4, "text":"Excel" }, { "id":5, "text":"Sap2000" }, { "id":6, "text":"ReactNative" }, ... ]
       const result = await GetRealApi("ComputerSkillType");
       if (Array.isArray(result)) {
         setComputerSkillTypes(result);
@@ -109,9 +129,12 @@ const ComputerSkills = ({ resume }) => {
       Alert.alert("Uyarı", "Lütfen bir seviye seçin.");
       return;
     }
+
+    // Sunucu PUT/POST'ta { id, computerSkillTypeId, level, resumeId } bekliyor (level integer)
     try {
       if (form.id) {
-        // Güncelleme (PUT)
+        // Güncelleme (PUT /api/ComputerSkill)
+        // { "id": 2, "computerSkillTypeId": 4, "level": 5, "resumeId": 1 }
         const payload = {
           id: form.id,
           computerSkillTypeId: form.computerSkillTypeId,
@@ -130,7 +153,8 @@ const ComputerSkills = ({ resume }) => {
           Alert.alert("Hata", "Güncelleme sırasında hata oluştu.");
         }
       } else {
-        // Ekleme (POST)
+        // Ekleme (POST /api/ComputerSkill)
+        // { "computerSkillTypeId":4, "level":5, "resumeId":1 }
         const payload = {
           computerSkillTypeId: form.computerSkillTypeId,
           level: form.level,
@@ -166,7 +190,6 @@ const ComputerSkills = ({ resume }) => {
           style: "destructive",
           onPress: async () => {
             try {
-              // DELETE /api/ComputerSkill/{id}
               const result = await DeleteRealApi(`ComputerSkill/${skillId}`);
               if (result) {
                 Alert.alert("Başarılı", "Bilgisayar becerisi silindi.");
@@ -185,34 +208,75 @@ const ComputerSkills = ({ resume }) => {
 
   // ================== Düzenleme (Form'a Aktar) ==================
   const handleEdit = (item) => {
+    // item = { id:2, computerSkillType:"ReactNative", level:"***", resumeId:1 }
+    // Sunucu PUT/POST'ta ID bekliyor: "computerSkillTypeId"
+    // Dolayısıyla "ReactNative" metninin ID'sini bulmamız gerek:
+    const matchedType = computerSkillTypes.find(
+      (t) => t.text === item.computerSkillType
+    );
+    const foundId = matchedType ? matchedType.id : null;
+
+    // Seviye "level": "*****" (yıldız string) veya integer gelebilir.
+    // Sunucuya integer göndermemiz lazım (ör. 5).
+    // Yıldız sayısını parse etmek için basit bir yöntem:
+    // (Eğer sunucu "3" döndürüyorsa parseInt yeterli)
+    // (Eğer "****" döndürüyorsa length alıp parseInt'e çevirmek gerek)
+    let numericLevel = parseInt(item.level, 10);
+    if (isNaN(numericLevel)) {
+      // Örneğin "****" => length=4 => seviye=4
+      numericLevel = item.level ? item.level.length : 0;
+    }
+
     setForm({
       id: item.id,
-      computerSkillTypeId: item.computerSkillTypeId,
-      level: item.level,
+      computerSkillTypeId: foundId,
+      level: numericLevel,
       resumeId: item.resumeId,
     });
     setModalVisible(true);
   };
 
-  // Seviye sayısını yıldıza dönüştürmek için yardımcı fonksiyon
-  const getLevelStars = (level) => {
-    if (!level || level < 1) return "";
-    return "★".repeat(level); // Alternatif: "*".repeat(level)
+  // ================== Listelemede Seviye Gösterimi ==================
+  // Sunucu "level" alanını "*****" gibi bir metin veya integer olarak döndürebilir.
+  // Bu fonksiyon, hem metin hem sayı durumunu destekliyor.
+  const getStars = (val) => {
+    // 1) Eğer val integer ise, parseInt ile yıldız sayısını tekrarlar
+    // 2) Eğer val "****" gibi bir string ise direkt dönebilir
+    // 3) Veya karışık durumlarda unify edebiliriz
+    if (!val) return "";
+
+    // Eğer sunucu "level": "***" dönüyorsa:
+    if (typeof val === "string" && val.includes("*")) {
+      return val; // "***" gibi
+    }
+
+    // Eğer sunucu integer dönüyorsa (ör. 3) veya string "3"
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num > 0) {
+      return "★".repeat(num);
+    }
+
+    // Diğer durumlarda boş döndür
+    return "";
   };
 
   // ================== FlatList Item Render ==================
   const renderSkillItem = ({ item }) => {
-    // Eşleşen skill türü (ComputerSkillType) bulma
-    const matchedType = computerSkillTypes.find(
-      (type) => type.id === item.computerSkillTypeId
-    );
+    // item.computerSkillType -> "Excel" vb. (metin)
+    // Eşleştirme: "Excel" -> ID=4
+    // Tersini yapmaya gerek yok; sadece ekranda "Excel" göstermek yeterli
+    // Ama isterseniz ID ile de eşleştirebilirsiniz:
+    // const matchedType = computerSkillTypes.find(t => t.text === item.computerSkillType);
+    // const skillName = matchedType ? matchedType.text : item.computerSkillType;
+    // Bu senaryoda item.computerSkillType metnini doğrudan gösteriyoruz:
+    const skillName = item.computerSkillType || "Bilinmeyen Beceri";
+    const levelStars = getStars(item.level);
+
     return (
       <View style={styles.itemContainer}>
         <View>
-          <Text style={styles.itemTitle}>
-            {(matchedType && matchedType.text) || "Bilinmeyen Beceri"}
-          </Text>
-          <Text>Seviye: {getLevelStars(item.level)}</Text>
+          <Text style={styles.itemTitle}>{skillName}</Text>
+          <Text>Seviye: {levelStars}</Text>
         </View>
         <View style={styles.iconContainer}>
           <TouchableOpacity onPress={() => handleEdit(item)}>
@@ -248,30 +312,26 @@ const ComputerSkills = ({ resume }) => {
         <Text style={styles.addButtonText}>+ Ekle</Text>
       </TouchableOpacity>
 
-      {/* Bilgisayar Becerileri Listesi */}
       <FlatList
         data={computerSkillsData}
         renderItem={renderSkillItem}
-        keyExtractor={(item) =>
-          item.id ? item.id.toString() : Math.random().toString()
-        }
+        keyExtractor={(item) => (item.id ? item.id.toString() : Math.random().toString())}
       />
 
       {/* Modal: Ekle / Düzenle */}
-      <Modal visible={modalVisible} transparent={true} animationType="slide">
+      <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {form.id ? "Bilgisayar Becerisi Düzenle" : "Yeni Bilgisayar Becerisi Ekle"}
             </Text>
 
+            {/* Beceri Türü */}
             <Text style={styles.label}>Beceri Türü:</Text>
             <Picker
               selectedValue={form.computerSkillTypeId}
               style={styles.picker}
-              onValueChange={(val) =>
-                setForm((prev) => ({ ...prev, computerSkillTypeId: val }))
-              }
+              onValueChange={(val) => setForm((prev) => ({ ...prev, computerSkillTypeId: val }))}
             >
               <Picker.Item label="Seçiniz..." value={null} />
               {computerSkillTypes.map((type) => (
@@ -279,20 +339,17 @@ const ComputerSkills = ({ resume }) => {
               ))}
             </Picker>
 
-            <Text style={styles.label}>Seviye (1-5 arası):</Text>
+            {/* Seviye */}
+            <Text style={styles.label}>Seviye (1 - 5):</Text>
             <Picker
               selectedValue={form.level}
               style={styles.picker}
-              onValueChange={(val) =>
-                setForm((prev) => ({ ...prev, level: val }))
-              }
+              onValueChange={(val) => setForm((prev) => ({ ...prev, level: val }))}
             >
               <Picker.Item label="Seçiniz..." value={null} />
-              <Picker.Item label="★ (1)" value={1} />
-              <Picker.Item label="★★ (2)" value={2} />
-              <Picker.Item label="★★★ (3)" value={3} />
-              <Picker.Item label="★★★★ (4)" value={4} />
-              <Picker.Item label="★★★★★ (5)" value={5} />
+              {levelOptions.map((opt) => (
+                <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+              ))}
             </Picker>
 
             <View style={styles.modalButtons}>
@@ -315,6 +372,7 @@ const ComputerSkills = ({ resume }) => {
 
 export default ComputerSkills;
 
+// ================== Stiller ==================
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -355,10 +413,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   label: { fontSize: 16, fontWeight: "bold", marginTop: 12 },
-  picker: {
-    marginVertical: 8,
-    backgroundColor: "#fff",
-  },
+  picker: { marginVertical: 8, backgroundColor: "#fff" },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
