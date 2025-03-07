@@ -19,6 +19,10 @@ import { ResumesScreen } from "../Resumes/ResumesScreen";
 import { AddResume } from "../Resumes/AddResume";
 import { ResumeDetail } from "../Resumes/ResumeDetail";
 import EditResumeTabs from "../Resumes/Tabs/EditResumeTabs";
+import UsersScreen from "../Users/UsersScreen"
+import EditUserTabs from "../Users/Tabs/EditUserTabs";
+import AddUser from "../Users/AddUser";
+
 
 import { checkToken } from "../../Components/utils";
 import { Login } from "../Login/Login";
@@ -63,7 +67,8 @@ export function MyDrawer({ setIsLoggedIn }) {
     >
       <Drawer.Screen name="Home" component={HomeScreen} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
-      <Drawer.Screen name="Resumes" component={ResumesScreen} />
+      <Drawer.Screen name="UsersScreen" component={UsersScreen} />
+      <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
 
       {/* Menüde görünmesini istemediğiniz ekranlar */}
 
@@ -96,12 +101,26 @@ export function MyDrawer({ setIsLoggedIn }) {
           unmountOnBlur: true, // Ekrandan çıkınca unmount et
         }}
       />
-
       <Drawer.Screen
         name="ResumeDetail"
         component={ResumeDetail}
         options={{ drawerItemStyle: { display: "none" } }}
       />
+      <Drawer.Screen
+      name="AddUser"
+      component={AddUser}
+      options={{ drawerItemStyle: { display: "none" } }}
+      />
+
+
+<Drawer.Screen
+  name="EditUser"
+  component={EditUserTabs}
+  options={{ drawerItemStyle: { display: "none" }, 
+  unmountOnBlur: true, // Ekrandan çıkınca unmount et
+}}
+/>
+
     </Drawer.Navigator>
   );
 }
