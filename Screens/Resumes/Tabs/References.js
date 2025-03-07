@@ -24,19 +24,13 @@ const References = (props) => {
   const { resume } = props;
   const effectiveResumeId = resume?.id;
 
-  if (!effectiveResumeId) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "red" }}>
-          Hata: Resume ID bulunamadı. Lütfen geçerli parametre gönderildiğinden emin olun.
-        </Text>
-      </View>
-    );
-  }
-
   // Referans verilerini saklamak için state
   const [referencesData, setReferencesData] = useState([]);
+  // Referans tipi listesini saklamak için state
+  const [referenceTypes, setReferenceTypes] = useState([]);
+  // Ekran yüklenirken gösterilecek loading spinner
   const [loading, setLoading] = useState(false);
+  // Modal görünür/gizli
   const [modalVisible, setModalVisible] = useState(false);
 
   // Form state'i: Düzenleme modunda id dolu, ekleme modunda boş olacak.
@@ -50,28 +44,36 @@ const References = (props) => {
     resumeId: effectiveResumeId,
   });
 
-  // Sabit referans tipi listesi
-  const referenceTypes = [
-    { id: 1, type: "Öğretim Üyesi" },
-    { id: 2, type: "Oda Yönetimi" },
-    { id: 3, type: "Yönetici" },
-    { id: 4, type: "Meslektaş" },
-    { id: 5, type: "İş Arkadaşı" },
-  ];
-
+  // Sayfa ilk açıldığında veya resumeId değiştiğinde verileri çek
   useEffect(() => {
+    if (!effectiveResumeId) return;
+    fetchReferenceTypes();
     fetchReferences(effectiveResumeId);
   }, [effectiveResumeId]);
 
-  // ================== REFERANSLARI ÇEK (GET) ==================
+  // ================== REFERANS TİPLERİNİ ÇEK (GET /api/ReferenceType) ==================
+  const fetchReferenceTypes = async () => {
+    try {
+      const result = await GetRealApi("ReferenceType");
+      if (Array.isArray(result)) {
+        setReferenceTypes(result);
+      } else {
+        console.warn("ReferenceType API’den beklenmeyen bir veri döndü.");
+      }
+    } catch (error) {
+      console.error("Referans tipleri alınırken hata oluştu:", error);
+    }
+  };
+
+  // ================== REFERANSLARI ÇEK (GET /api/Reference?resumeId=) ==================
   const fetchReferences = async (resumeId) => {
     try {
       setLoading(true);
       const result = await GetRealApi(`Reference?resumeId=${resumeId}`);
       if (Array.isArray(result)) {
-        setReferencesData(result.filter((item) => item.resumeId === resumeId));
+        setReferencesData(result);
       } else {
-        console.warn("API'den referans verisi boş veya hatalı döndü.");
+        console.warn("Reference API’den beklenmeyen bir veri döndü.");
       }
     } catch (error) {
       console.error("Referanslar alınırken hata oluştu:", error);
@@ -96,12 +98,12 @@ const References = (props) => {
   // ================== KAYDET (POST / PUT) ==================
   const handleSubmit = async () => {
     if (!form.name || !form.lastName || !form.referenceTypeId) {
-      Alert.alert("Uyarı", "Lütfen zorunlu alanları doldurun.");
+      Alert.alert("Uyarı", "Lütfen zorunlu alanları (Ad, Soyad, Tip) doldurun.");
       return;
     }
     try {
       if (form.id) {
-        // Güncelleme modu: PUT isteği
+        // Güncelleme modu: PUT /api/Reference
         const payload = {
           id: form.id,
           name: form.name,
@@ -121,7 +123,7 @@ const References = (props) => {
           Alert.alert("Hata", "Güncelleme sırasında hata oluştu.");
         }
       } else {
-        // Ekleme modu: POST isteği
+        // Ekleme modu: POST /api/Reference
         const payload = {
           name: form.name,
           lastName: form.lastName,
@@ -129,10 +131,6 @@ const References = (props) => {
           contact: form.contact,
           referenceTypeId: form.referenceTypeId,
           resumeId: form.resumeId,
-          createdDate: new Date().toISOString(),
-          updatedDate: new Date().toISOString(),
-          type: "string",
-          isSuccess: true,
         };
         const created = await PostRealApi("Reference", payload);
         if (created) {
@@ -182,36 +180,52 @@ const References = (props) => {
       lastName: item.lastName,
       companyName: item.companyName,
       contact: item.contact,
-      referenceTypeId: item.referenceType?.id || item.referenceTypeId || null,
+      // Sunucudan referenceTypeId doğrudan geliyor varsayımı
+      // (Eğer sadece referenceType nesnesi geliyorsa: item.referenceType?.id)
+      referenceTypeId: item.referenceTypeId,
       resumeId: item.resumeId,
     });
     setModalVisible(true);
   };
 
   // ================== FLATLIST ITEM RENDER ==================
-  const renderReferenceItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      <View>
-        <Text style={styles.itemTitle}>
-          {item.name} {item.lastName}
-        </Text>
-        <Text>{item.companyName}</Text>
-        <Text>{item.contact}</Text>
-        <Text>
-          Tip:{" "}
-          {item.referenceType ? item.referenceType.type : "Atanmamış"}
+  const renderReferenceItem = ({ item }) => {
+    // Referans tipi adını bulmak için referenceTypes listesinde eşleştirme yapıyoruz.
+    // Sunucu item.referenceType dönüyor mu? Dönmüyorsa item.referenceTypeId üzerinden buluruz.
+    const foundType = referenceTypes.find((rt) => rt.id === item.referenceTypeId);
+    const displayType = foundType ? foundType.type : "Atanmamış";
+
+    return (
+      <View style={styles.itemContainer}>
+        <View>
+          <Text style={styles.itemTitle}>
+            {item.name} {item.lastName}
+          </Text>
+          <Text>{item.companyName}</Text>
+          <Text>{item.contact}</Text>
+          <Text>Tip: {displayType}</Text>
+        </View>
+        <View style={styles.iconContainer}>
+          <TouchableOpacity onPress={() => handleEdit(item)}>
+            <MaterialIcons name="edit" size={24} color="blue" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
+            <MaterialIcons name="delete" size={24} color="red" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  if (!effectiveResumeId) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: "red" }}>
+          Hata: Resume ID bulunamadı. Lütfen geçerli parametre gönderildiğinden emin olun.
         </Text>
       </View>
-      <View style={styles.iconContainer}>
-        <TouchableOpacity onPress={() => handleEdit(item)}>
-          <MaterialIcons name="edit" size={24} color="blue" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDelete(item.id)}>
-          <MaterialIcons name="delete" size={24} color="red" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  }
 
   if (loading) {
     return (
@@ -223,6 +237,7 @@ const References = (props) => {
 
   return (
     <View style={styles.container}>
+      {/* Ekle Butonu */}
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => {
@@ -233,6 +248,7 @@ const References = (props) => {
         <Text style={styles.addButtonText}>+ Ekle</Text>
       </TouchableOpacity>
 
+      {/* Referans Listesi */}
       <FlatList
         data={referencesData}
         renderItem={renderReferenceItem}
@@ -241,6 +257,7 @@ const References = (props) => {
         }
       />
 
+      {/* Ekle / Düzenle Modal */}
       <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -284,6 +301,7 @@ const References = (props) => {
               }
             />
 
+            {/* Referans Tipi Seçimi */}
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={form.referenceTypeId}
@@ -298,6 +316,7 @@ const References = (props) => {
               </Picker>
             </View>
 
+            {/* Kaydet & İptal Butonları */}
             <View style={styles.modalButtons}>
               <Button title="Kaydet" onPress={handleSubmit} />
               <Button
