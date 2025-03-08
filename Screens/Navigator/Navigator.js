@@ -1,16 +1,10 @@
-// MyDrawer.js
+// Navigator.js
 import React, { useEffect, useState } from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  View,
-  ActivityIndicator,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet } from "react-native";
 
-// Ekranlar
+// Mevcut ekranlar
 import { HomeScreen } from "../Home/HomeScreen";
 import { ProfileScreen } from "../Profiles/ProfileScreen";
 import { ProfileDetail } from "../Profiles/ProfileDetail";
@@ -19,13 +13,15 @@ import { ResumesScreen } from "../Resumes/ResumesScreen";
 import { AddResume } from "../Resumes/AddResume";
 import { ResumeDetail } from "../Resumes/ResumeDetail";
 import EditResumeTabs from "../Resumes/Tabs/EditResumeTabs";
-import UsersScreen from "../Users/UsersScreen"
+import UsersScreen from "../Users/UsersScreen";
 import EditUserTabs from "../Users/Tabs/EditUserTabs";
 import AddUser from "../Users/AddUser";
+import { Login } from "../Login/Login";
 
+import SignUpMember from "../SignUp/SignUpMember";
+import SignUpCompany from "../SignUp/SignUpCompany";
 
 import { checkToken } from "../../Components/utils";
-import { Login } from "../Login/Login";
 
 const Drawer = createDrawerNavigator();
 
@@ -65,19 +61,30 @@ export function MyDrawer({ setIsLoggedIn }) {
         headerRight: () => <ExitButton setIsLoggedIn={setIsLoggedIn} />,
       }}
     >
+      {/* Görünür menüdeki ekranlar */}
       <Drawer.Screen name="Home" component={HomeScreen} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="UsersScreen" component={UsersScreen} />
       <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
 
-      {/* Menüde görünmesini istemediğiniz ekranlar */}
-
+      {/* Giriş ve Kayıt ekranları (Menüde görünmesin diye display none) */}
       <Drawer.Screen
         name="Login"
         component={Login}
         options={{ drawerItemStyle: { display: "none" } }}
       />
+      <Drawer.Screen
+        name="SignUpMember"
+        component={SignUpMember}
+        options={{ drawerItemStyle: { display: "none" } }}
+      />
+      <Drawer.Screen
+        name="SignUpCompany"
+        component={SignUpCompany}
+        options={{ drawerItemStyle: { display: "none" } }}
+      />
 
+      {/* Diğer gizli ekranlar */}
       <Drawer.Screen
         name="ProfileDetail"
         component={ProfileDetail}
@@ -98,7 +105,7 @@ export function MyDrawer({ setIsLoggedIn }) {
         component={EditResumeTabs}
         options={{
           drawerItemStyle: { display: "none" },
-          unmountOnBlur: true, // Ekrandan çıkınca unmount et
+          unmountOnBlur: true,
         }}
       />
       <Drawer.Screen
@@ -107,20 +114,18 @@ export function MyDrawer({ setIsLoggedIn }) {
         options={{ drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen
-      name="AddUser"
-      component={AddUser}
-      options={{ drawerItemStyle: { display: "none" } }}
+        name="AddUser"
+        component={AddUser}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
-
-
-<Drawer.Screen
-  name="EditUser"
-  component={EditUserTabs}
-  options={{ drawerItemStyle: { display: "none" }, 
-  unmountOnBlur: true, // Ekrandan çıkınca unmount et
-}}
-/>
-
+      <Drawer.Screen
+        name="EditUser"
+        component={EditUserTabs}
+        options={{
+          drawerItemStyle: { display: "none" },
+          unmountOnBlur: true,
+        }}
+      />
     </Drawer.Navigator>
   );
 }
@@ -155,5 +160,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-
-export default MyDrawer;

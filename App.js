@@ -1,3 +1,4 @@
+// App.js
 import "react-native-gesture-handler";
 import React, { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
@@ -7,8 +8,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Screens
 import { MyDrawer } from "./Screens/Navigator/Navigator";
 import { Login } from "./Screens/Login/Login";
+import SignUpMember from "./Screens/SignUp/SignUpMember";
+import SignUpCompany from "./Screens/SignUp/SignUpCompany";
 
 const Stack = createStackNavigator();
+
+function AuthNavigator({ setIsLoggedIn }) {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login">
+        {(props) => <Login {...props} setIsLoggedIn={setIsLoggedIn} />}
+      </Stack.Screen>
+      <Stack.Screen name="SignUpMember" component={SignUpMember} />
+      <Stack.Screen name="SignUpCompany" component={SignUpCompany} />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -25,22 +40,16 @@ export default function App() {
   };
 
   if (checkingToken) {
-    return null; // Ekranı boş bırak, kontrol bitene kadar UI gösterme
+    return null; // Kontrol bitene kadar boş ekran
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isLoggedIn ? (
-          <Stack.Screen name="Home">
-            {(props) => <MyDrawer {...props} setIsLoggedIn={setIsLoggedIn} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Login">
-            {(props) => <Login {...props} setIsLoggedIn={setIsLoggedIn} />}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
+      {isLoggedIn ? (
+        <MyDrawer setIsLoggedIn={setIsLoggedIn} />
+      ) : (
+        <AuthNavigator setIsLoggedIn={setIsLoggedIn} />
+      )}
     </NavigationContainer>
   );
 }
