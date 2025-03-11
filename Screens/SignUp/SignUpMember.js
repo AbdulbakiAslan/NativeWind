@@ -8,30 +8,82 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { CheckBox } from 'react-native-elements';
+import { CheckBox } from "react-native-elements";
+import { PostRealApi } from "../../Components/ApiService";
 
 const SignUpMember = ({ navigation }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [sicilNo, setSicilNo] = useState("");
+  const [userName, setUserName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [rePassword, setRePassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const handleSignUp = () => {
+  // Kayıt butonuna basıldığında tetiklenecek fonksiyon
+  const handleSignUp = async () => {
+    // Tüm alanların doldurulup doldurulmadığını kontrol ediyoruz
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !userName.trim() ||
+      !phone.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !rePassword.trim()
+    ) {
+      Alert.alert("Uyarı", "Lütfen tüm alanları doldurunuz.");
+      return;
+    }
+
+    // Üyelik sözleşmesi onay kontrolü
     if (!termsAccepted) {
       Alert.alert("Uyarı", "Üyelik sözleşmesini kabul etmelisiniz.");
       return;
     }
-    if (password !== confirmPassword) {
+    // Şifre validasyonu: en az 6 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermeli
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Hata",
+        "Şifreniz en az 6 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir!"
+      );
+      return;
+    }
+    if (password !== rePassword) {
       Alert.alert("Uyarı", "Şifre ve Şifre Tekrar alanları eşleşmiyor!");
       return;
     }
 
-    Alert.alert("Başarılı", "Kayıt işlemi tamamlandı!");
-    // navigation.navigate("Login");
+    try {
+      // /api/User/SignUpMember endpoint’ine servisinize uygun şekilde istek atıyoruz.
+      const result = await PostRealApi(
+        "User/SignUpMember",
+        {
+          name: firstName,
+          lastName: lastName,
+          userName: userName,
+          phone: phone,
+          email: email,
+          password: password,
+          rePassword: rePassword,
+          checkTermsAndConditions: termsAccepted,
+        },
+        navigation
+      );
+
+      // API boş yanıt döndürse bile (kayıt gerçekleşmişse) başarı mesajı gösteriyoruz
+      if (result || result === null) {
+        Alert.alert("Başarılı", "Kayıt işlemi tamamlandı!");
+        navigation.navigate("Login");
+      } else {
+        Alert.alert("Hata", "Kayıt sırasında bir hata oluştu.");
+      }
+    } catch (error) {
+      Alert.alert("Hata", "Sunucuyla iletişim sırasında bir hata oluştu.");
+      console.error(error);
+    }
   };
 
   return (
@@ -42,13 +94,52 @@ const SignUpMember = ({ navigation }) => {
           İMO Üyesi iseniz bu sayfadan hesap oluşturabilirsiniz
         </Text>
 
-        <TextInput style={styles.input} placeholder="Adı" value={firstName} onChangeText={setFirstName} />
-        <TextInput style={styles.input} placeholder="Soyadı" value={lastName} onChangeText={setLastName} />
-        <TextInput style={styles.input} placeholder="Oda Sicil No" value={sicilNo} onChangeText={setSicilNo} />
-        <TextInput style={styles.input} placeholder="Telefon" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-        <TextInput style={styles.input} placeholder="Email" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <TextInput style={styles.input} placeholder="Şifre" secureTextEntry value={password} onChangeText={setPassword} />
-        <TextInput style={styles.input} placeholder="Şifre Tekrar" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+        <TextInput
+          style={styles.input}
+          placeholder="Adı"
+          value={firstName}
+          onChangeText={setFirstName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Soyadı"
+          value={lastName}
+          onChangeText={setLastName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Kullanıcı Adı"
+          value={userName}
+          onChangeText={setUserName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Telefon"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Şifre"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Şifre Tekrar"
+          secureTextEntry
+          value={rePassword}
+          onChangeText={setRePassword}
+        />
 
         <View style={styles.termsContainer}>
           <CheckBox
@@ -105,15 +196,69 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 5, textAlign: "center" },
-  subtitle: { fontSize: 14, color: "#666", marginBottom: 20, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#CCC", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 10, fontSize: 14, backgroundColor: "#FFF" },
-  termsContainer: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
-  checkbox: { marginLeft: 0, paddingLeft: 0, backgroundColor: "transparent", borderWidth: 0 },
-  termsText: { fontSize: 14, color: "#333", flexShrink: 1 },
-  createButton: { backgroundColor: "#007AFF", paddingVertical: 12, borderRadius: 5, marginBottom: 10 },
-  createButtonText: { color: "#FFF", textAlign: "center", fontWeight: "bold", fontSize: 16 },
-  footer: { flexDirection: "row", flexWrap: "wrap", marginTop: 5, justifyContent: "center" },
-  footerText: { fontSize: 14, color: "#333" },
-  linkText: { fontSize: 14, color: "#007AFF", fontWeight: "bold" },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#CCC",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+    fontSize: 14,
+    backgroundColor: "#FFF",
+  },
+  termsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  checkbox: {
+    marginLeft: 0,
+    paddingLeft: 0,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+  },
+  termsText: {
+    fontSize: 14,
+    color: "#333",
+    flexShrink: 1,
+  },
+  createButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  createButtonText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  footer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 5,
+    justifyContent: "center",
+  },
+  footerText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  linkText: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "bold",
+  },
 });
