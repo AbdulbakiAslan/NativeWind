@@ -14,16 +14,6 @@ const UsersScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Üst Kısım: Arama alanı ve Ekle butonu */}
-      <View style={styles.header}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Ara..."
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddUser}>
-          <Text style={styles.addButtonText}>Ekle</Text>
-        </TouchableOpacity>
-      </View>
       <EditUserTabs />
     </View>
   );
