@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { CheckBox } from "react-native-elements";
+import { PostRealApi } from "../../Components/ApiService";
 
 const SignUpCompany = ({ navigation }) => {
   const [companyName, setCompanyName] = useState("");
@@ -22,17 +23,76 @@ const SignUpCompany = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const handleSignUp = () => {
+  // Kayıt butonuna basıldığında tetiklenecek fonksiyon
+  const handleSignUp = async () => {
+    // 1) Tüm alanların doldurulup doldurulmadığını kontrol edelim
+    if (
+      !companyName.trim() ||
+      !companyAddress.trim() ||
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !username.trim() ||
+      !phone.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
+      Alert.alert("Uyarı", "Lütfen tüm alanları doldurunuz.");
+      return;
+    }
+
+    // 2) Üyelik sözleşmesi onay kontrolü
     if (!termsAccepted) {
       Alert.alert("Uyarı", "Üyelik sözleşmesini kabul etmelisiniz.");
       return;
     }
+
+    // 3) Şifre validasyonu (en az 6 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter)
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Hata",
+        "Şifreniz en az 6 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir!"
+      );
+      return;
+    }
+
+    // 4) Şifrelerin eşleşme kontrolü
     if (password !== confirmPassword) {
       Alert.alert("Uyarı", "Şifreler eşleşmiyor!");
       return;
     }
-    Alert.alert("Başarılı", "Şirket hesabı oluşturuldu!");
-    navigation.navigate("Login");
+
+    try {
+      // 5) /api/User/SignUpCompany endpoint’ine POST isteği atıyoruz
+      const result = await PostRealApi(
+        "User/SignUpCompany",
+        {
+          companyName: companyName,
+          companyAddress: companyAddress,
+          firstName: firstName,
+          lastName: lastName,
+          userName: username, // API 'userName' bekliyorsa bu şekilde gönderiyoruz
+          phone: phone,
+          email: email,
+          password: password,
+          rePassword: confirmPassword, // confirmPassword alanını rePassword olarak gönderiyoruz
+          checkTermsAndConditions: termsAccepted, // termsAccepted → checkTermsAndConditions
+        },
+        navigation
+      );
+
+      // 6) API boş yanıt döndürse de kayıt başarılıysa ekrana bildirim veriyoruz
+      if (result || result === null) {
+        Alert.alert("Başarılı", "Şirket hesabı oluşturuldu!");
+        navigation.navigate("Login"); // Başarılı ise Login ekranına yönlendiriyoruz
+      } else {
+        Alert.alert("Hata", "Kayıt sırasında bir hata oluştu.");
+      }
+    } catch (error) {
+      Alert.alert("Hata", "Sunucuyla iletişim sırasında bir hata oluştu.");
+      console.error(error);
+    }
   };
 
   return (
@@ -40,8 +100,9 @@ const SignUpCompany = ({ navigation }) => {
       <View style={styles.formContainer}>
         <Text style={styles.title}>Şirket Hesabı Oluştur</Text>
         <Text style={styles.subtitle}>
-          Şirketinizde İnşaat Mühendisi istihdam etmek istiyorsanız bu sayfadan hesap oluşturabilirsiniz
+          Şirketinizde Mühendis istihdam etmek istiyorsanız bu sayfadan hesap oluşturabilirsiniz
         </Text>
+        
         <TextInput
           style={styles.input}
           placeholder="Şirket Adı"
