@@ -142,8 +142,7 @@ const AddUser = () => {
             style={styles.infoIcon}
           />
           <Text style={styles.infoText}>
-            Şifre, en az 6 karakter uzunluğunda olup; bir büyük harf, bir rakam ve bir özel karakter içermelidir.
-          </Text>
+          Dikkat! Bu sayfa ile sadece "Yönetici" rolüne sahip kullanıcı oluşturulabilir. Oluşturulan kullanıcı tüm Yönetici yetkilerine sahip olacaktır.</Text>
         </View>
       </View>
     </ScrollView>
