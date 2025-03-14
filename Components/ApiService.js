@@ -181,6 +181,55 @@ export async function DeleteRealApi(url, navigation) {
   }
 }
 
+// API PATCH Fonksiyonu (401 Kontrolü ile)
+export async function PatchRealApi(url, data, navigation) {
+  try {
+    const apiUrl = baseUrl + url;
+    const token = await getToken();
+    const headers = token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json" };
+
+    console.log("📡 Gerçek API PATCH İsteği:", apiUrl);
+    console.log("📦 Gönderilen Veri:", JSON.stringify(data));
+
+    const response = await fetch(apiUrl, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
+      await logout(navigation);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP Hatası: ${response.status}`);
+    }
+
+    // Eğer API 204 (No Content) döndürüyorsa, güncelleme başarılı kabul edilir.
+    if (response.status === 204) {
+      console.log("📡 API başarıyla güncellendi (204), içerik boş.");
+      return {};
+    }
+
+    const textData = await response.text();
+    if (!textData) {
+      console.log("📡 API başarıyla güncellendi, ancak içerik boş.");
+      return {};
+    }
+
+    return JSON.parse(textData);
+  } catch (error) {
+    console.log("❌ Gerçek API PATCH Hatası:", error);
+    return null;
+  }
+}
+
+
+
 /**
  * 1) Eğitim Listesini Getir
  * GET /api/Education

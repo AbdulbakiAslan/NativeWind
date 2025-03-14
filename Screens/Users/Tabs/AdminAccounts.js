@@ -11,13 +11,13 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { GetRealApi, DeleteRealApi } from "../../../Components/ApiService";
+import { GetRealApi, DeleteRealApi, PatchRealApi } from "../../../Components/ApiService"; 
 import { checkTokenAndRedirect } from "../../../Components/utils";
 
 const AdminAccounts = () => {
   const navigation = useNavigation();
-  const [fetchedAdmins, setFetchedAdmins] = useState([]);  
-  const [filteredAdmins, setFilteredAdmins] = useState([]);  
+  const [fetchedAdmins, setFetchedAdmins] = useState([]);
+  const [filteredAdmins, setFilteredAdmins] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -67,7 +67,7 @@ const AdminAccounts = () => {
       setFilteredAdmins(fetchedAdmins);
       return;
     }
-    // userName, email veya ad-soyad gibi alanlarda arama yapabilirsiniz
+    // userName veya email üzerinde arama yapabilirsiniz
     const filtered = fetchedAdmins.filter((admin) =>
       `${admin.userName} ${admin.email}`
         .toLowerCase()
@@ -105,6 +105,25 @@ const AdminAccounts = () => {
     );
   };
 
+  // Onay Durumu Değiştirme
+  const handleApprovalToggle = async (user) => {
+    try {
+      const newStatus = !user.isApproved;
+      const endpoint = `User?id=${user.id}&status=${newStatus}`;
+      const updateResult = await PatchRealApi(endpoint, {}, navigation);
+
+      if (updateResult) {
+        // Başarılı ise listeyi tekrar çekerek ekranda güncel durumu göster
+        fetchAdmins();
+      } else {
+        Alert.alert("Hata", "Onay durumu güncellenemedi.");
+      }
+    } catch (error) {
+      console.error("Onay durumu değiştirilirken hata:", error);
+      Alert.alert("Hata", "Onay durumu değiştirilemedi.");
+    }
+  };
+
   const renderAdminItem = ({ item }) => {
     return (
       <View style={styles.cardContainer}>
@@ -120,16 +139,13 @@ const AdminAccounts = () => {
         <Text style={styles.value}>{item.email}</Text>
 
         <Text style={styles.label}>ONAY DURUMU:</Text>
-        <Text style={styles.value}>
-          {item.isApproved ? "Onaylı" : "Onaysız"}
-        </Text>
+        <Text style={styles.value}>{item.isApproved ? "Onaylı" : "Onaysız"}</Text>
 
         <View style={styles.iconRow}>
           {/* Düzenleme Butonu */}
           <TouchableOpacity
             onPress={() => {
               console.log("Editing user with id:", item.id);
-              // Örneğin "EditUser" ekranına gidebilirsiniz:
               // navigation.navigate("EditUser", { user: item });
             }}
             style={styles.iconButton}
@@ -148,12 +164,25 @@ const AdminAccounts = () => {
           {/* Detay Butonu */}
           <TouchableOpacity
             onPress={() => {
-              // "UserDetail" ekranına gidebilirsiniz:
               // navigation.navigate("UserDetail", { userId: item.id });
             }}
             style={styles.iconButton}
           >
             <MaterialIcons name="info" size={24} color="green" />
+          </TouchableOpacity>
+
+          {/* Onay Durumu Değiştirme Butonu */}
+          <TouchableOpacity
+            onPress={() => handleApprovalToggle(item)}
+            style={styles.iconButton}
+          >
+            <MaterialIcons
+              // Onaylı ise çarpı, onaysız ise tik ikonu
+              name={item.isApproved ? "close" : "check"}
+              size={24}
+              // Onaylıysa kırmızı, onaysızsa yeşil
+              color={item.isApproved ? "red" : "green"}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -172,14 +201,13 @@ const AdminAccounts = () => {
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
-             navigation.navigate("AddUser");
+            navigation.navigate("AddUser");
           }}
         >
           <Text style={styles.addButtonText}>Ekle</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Liste */}
       <FlatList
         data={filteredAdmins}
         renderItem={renderAdminItem}
@@ -254,4 +282,3 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
-
