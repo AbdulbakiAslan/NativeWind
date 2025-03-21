@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { GetRealApi, DeleteRealApi } from "../../../Components/ApiService";
+import { GetRealApi, DeleteRealApi, PatchRealApi } from "../../../Components/ApiService";
 import { checkTokenAndRedirect } from "../../../Components/utils";
 
 const MemberAccounts = () => {
@@ -35,11 +35,6 @@ const MemberAccounts = () => {
   const fetchMembers = async () => {
     try {
       setIsRefreshing(true);
-      // API çağrısı; GetRealApi("User") tüm rollerin verisini döndürür:
-      // [
-      //   { "role": "admin", "users": [ ... ] },
-      //   { "role": "member", "users": [ ... ] }
-      // ]
       const allRoles = await GetRealApi("User", navigation);
       if (!Array.isArray(allRoles)) {
         console.error("API beklenen formatta veri döndürmedi.");
@@ -48,8 +43,6 @@ const MemberAccounts = () => {
         setIsRefreshing(false);
         return;
       }
-
-      // role alanı "member" olan nesneyi bul
       const memberRoleObj = allRoles.find((item) => item.role === "member");
       if (memberRoleObj && Array.isArray(memberRoleObj.users)) {
         setFetchedMembers(memberRoleObj.users);
@@ -106,6 +99,24 @@ const MemberAccounts = () => {
     );
   };
 
+  // Onay Durumu Değiştirme Fonksiyonu
+  const handleApprovalToggle = async (user) => {
+    try {
+      const newStatus = !user.isApproved;
+      const endpoint = `User?id=${user.id}&status=${newStatus}`;
+      const updateResult = await PatchRealApi(endpoint, {}, navigation);
+
+      if (updateResult) {
+        fetchMembers();
+      } else {
+        Alert.alert("Hata", "Onay durumu güncellenemedi.");
+      }
+    } catch (error) {
+      console.error("Onay durumu değiştirilirken hata:", error);
+      Alert.alert("Hata", "Onay durumu değiştirilemedi.");
+    }
+  };
+
   const renderMemberItem = ({ item }) => {
     return (
       <View style={styles.cardContainer}>
@@ -150,6 +161,18 @@ const MemberAccounts = () => {
             style={styles.iconButton}
           >
             <MaterialIcons name="info" size={20} color="green" />
+          </TouchableOpacity>
+
+          {/* Onay Durumu Değiştirme Butonu */}
+          <TouchableOpacity
+            onPress={() => handleApprovalToggle(item)}
+            style={styles.iconButton}
+          >
+            <MaterialIcons
+              name={item.isApproved ? "close" : "check"}
+              size={20}
+              color={item.isApproved ? "red" : "green"}
+            />
           </TouchableOpacity>
         </View>
       </View>
