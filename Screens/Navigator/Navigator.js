@@ -18,6 +18,7 @@ import EditUserTabs from "../Users/Tabs/EditUserTabs";
 import AddUser from "../Users/AddUser";
 import MemberScreen from "../Member/MemberScreen";
 import EditMemberTabs from "../Member/Tabs/EditMemberTabs";
+import MemberDetail from "../Member/MemberDetail";
 
 
 
@@ -130,6 +131,11 @@ export function MyDrawer({ setIsLoggedIn }) {
           drawerItemStyle: { display: "none" },
           unmountOnBlur: true,
         }}
+      />
+      <Drawer.Screen
+        name="MemberDetail"
+        component={MemberDetail}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen
         name="EditMember"
