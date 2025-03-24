@@ -16,8 +16,12 @@ import EditResumeTabs from "../Resumes/Tabs/EditResumeTabs";
 import UsersScreen from "../Users/UsersScreen";
 import EditUserTabs from "../Users/Tabs/EditUserTabs";
 import AddUser from "../Users/AddUser";
-import { Login } from "../Login/Login";
+import MemberScreen from "../Member/MemberScreen";
+import EditMemberTabs from "../Member/Tabs/EditMemberTabs";
 
+
+
+import { Login } from "../Login/Login";
 import SignUpMember from "../SignUp/SignUpMember";
 import SignUpCompany from "../SignUp/SignUpCompany";
 
@@ -66,6 +70,7 @@ export function MyDrawer({ setIsLoggedIn }) {
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="UsersScreen" component={UsersScreen} />
       <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
+      <Drawer.Screen name="MemberScreen" component={MemberScreen} />
 
       {/* Giriş ve Kayıt ekranları (Menüde görünmesin diye display none) */}
       <Drawer.Screen
@@ -121,6 +126,14 @@ export function MyDrawer({ setIsLoggedIn }) {
       <Drawer.Screen
         name="EditUser"
         component={EditUserTabs}
+        options={{
+          drawerItemStyle: { display: "none" },
+          unmountOnBlur: true,
+        }}
+      />
+      <Drawer.Screen
+        name="EditMember"
+        component={EditMemberTabs}
         options={{
           drawerItemStyle: { display: "none" },
           unmountOnBlur: true,
