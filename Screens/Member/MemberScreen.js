@@ -2,12 +2,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import EditMemberTabs from "./Tabs/EditMemberTabs";
+import AddMember from "./AddMember";
 
 const MemberScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.tabsContainer}>
-        <EditMemberTabs />
+        <AddMember />
       </View>
     </View>
   );
