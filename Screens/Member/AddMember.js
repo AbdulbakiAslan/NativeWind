@@ -11,12 +11,14 @@ import {
   KeyboardAvoidingView,
   StyleSheet,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
 
 const AddMember = () => {
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
   // Üye form alanlarımız
@@ -34,7 +36,6 @@ const AddMember = () => {
     address: "",
     district: "",
     province: "",
-    notes: "",
   };
 
   const [form, setForm] = useState(initialFormState);
@@ -103,17 +104,19 @@ const AddMember = () => {
       experienceStatus: form.experience,
       isLookingForJob: form.jobSeeking,
       isAnsweredLookingForJobMail: false,
-      notes: form.notes,
     };
 
     console.log("Gönderilecek veri:", dataToSend);
-    alert("Form gönderildi. Konsol loglarını kontrol ediniz.");
+    alert("Form gönderildi. EditMemberTabs ekranına yönlendiriliyorsunuz.");
 
     // Formu sıfırlama işlemi
     setForm(initialFormState);
     setBirthDate(new Date());
     setPhotoURI(null);
     setLoading(false);
+
+    // Üye ekleme işleminden sonra EditMemberTabs ekranına yönlendirme
+    navigation.navigate("EditMemberTabs", { member: dataToSend });
   };
 
   const genderOptions = [
@@ -316,21 +319,18 @@ const AddMember = () => {
             onChangeText={(text) => handleChange("province", text)}
             style={styles.input}
           />
-          <TextInput
-            placeholder="Notlar"
-            value={form.notes}
-            onChangeText={(text) => handleChange("notes", text)}
-            style={[styles.input, { height: 80 }]}
-            multiline
-          />
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>✔ Üye Ekle</Text>
-            )}
-          </TouchableOpacity>
+<TouchableOpacity
+  style={styles.submitButton}
+  onPress={() => navigation.navigate("EditMember")}
+>
+  {loading ? (
+    <ActivityIndicator color="#fff" />
+  ) : (
+    <Text style={styles.submitButtonText}>✔ Üye Ekle</Text>
+  )}
+</TouchableOpacity>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
