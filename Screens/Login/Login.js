@@ -28,10 +28,17 @@ export const Login = ({ navigation, setIsLoggedIn }) => {
         return;
       }
 
-      if (response.accessToken) {
+      // Hem access token hem de refresh token varsa, her ikisini de saklayın
+      if (response.accessToken && response.refreshToken) {
+        await AsyncStorage.setItem("userToken", response.accessToken);
+        await AsyncStorage.setItem("refreshToken", response.refreshToken);
+        setIsLoggedIn(true);
+        console.log("Access ve Refresh Token başarıyla kaydedildi:", response.accessToken);
+      } else if (response.accessToken) {
+        // Sadece access token mevcutsa, onu kaydet
         await AsyncStorage.setItem("userToken", response.accessToken);
         setIsLoggedIn(true);
-        console.log("Token başarıyla kaydedildi:", response.accessToken);
+        console.log("Sadece Access Token kaydedildi:", response.accessToken);
       } else {
         Alert.alert(
           "Giriş Başarısız",

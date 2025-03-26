@@ -1,3 +1,4 @@
+// ApiService.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CommonActions } from "@react-navigation/native";
 const baseUrl = "http://10.0.2.2:5237/api/"; // Gerçek API
@@ -10,6 +11,7 @@ const getToken = async () => {
 // Kullanıcıyı otomatik olarak çıkışa yönlendiren fonksiyon
 const logout = async (navigation) => {
   await AsyncStorage.removeItem("userToken");
+  await AsyncStorage.removeItem("refreshToken");
   navigation.dispatch(
     CommonActions.reset({
       index: 0,
@@ -18,23 +20,70 @@ const logout = async (navigation) => {
   );
 };
 
+// Refresh token işlemi: Backend'deki RefreshToken endpoint'ine istek yapar.
+export async function refreshToken(navigation) {
+  try {
+    const storedRefreshToken = await AsyncStorage.getItem("refreshToken");
+    if (!storedRefreshToken) {
+      console.warn("Refresh token bulunamadı!");
+      return false;
+    }
+    const refreshUrl = baseUrl + "Authentication/RefreshToken";
+    const response = await fetch(refreshUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.accessToken && data.refreshToken) {
+        await AsyncStorage.setItem("userToken", data.accessToken);
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+        console.log("Tokenlar yenilendi:", data.accessToken);
+        return true;
+      }
+    }
+    console.warn("Refresh token yenileme başarısız:", response.status);
+    return false;
+  } catch (error) {
+    console.error("Refresh token hatası:", error);
+    return false;
+  }
+}
+
+// Helper: API çağrısını refresh token mantığı ile yapar.
+async function fetchWithRefresh(apiUrl, options, navigation) {
+  let response = await fetch(apiUrl, options);
+  if (response.status === 401) {
+    console.warn("🚨 Token süresi dolmuş, refresh token ile yenileniyor...");
+    const refreshed = await refreshToken(navigation);
+    if (refreshed) {
+      const token = await getToken();
+      if (token) {
+        options.headers = {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+        };
+      }
+      response = await fetch(apiUrl, options);
+    } else {
+      console.warn("🚨 Refresh token yenileme başarısız, çıkış yapılıyor.");
+      await logout(navigation);
+    }
+  }
+  return response;
+}
+
 // API GET Fonksiyonu (401 Kontrolü ile)
 export async function GetRealApi(url, navigation) {
   try {
     const apiUrl = baseUrl + url;
     const token = await getToken();
-
     const headers = token
       ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
       : { "Content-Type": "application/json" };
 
-    const response = await fetch(apiUrl, { headers });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(apiUrl, { headers }, navigation);
 
     if (!response.ok) {
       console.error(`❌ API GET Hatası: HTTP ${response.status}`);
@@ -67,17 +116,15 @@ export async function PostRealApi(url, data, navigation) {
     console.log("📦 Gönderilen Veri:", JSON.stringify(data));
     console.log("🛠 Authorization Header:", headers);
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(data),
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(data),
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
@@ -108,29 +155,25 @@ export async function PutRealApi(url, data, navigation) {
     console.log("📡 Gerçek API PUT İsteği:", apiUrl);
     console.log("📦 Gönderilen Veri:", JSON.stringify(data));
 
-    const response = await fetch(apiUrl, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(data),
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(data),
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
     }
 
-    // Eğer API 204 (No Content) döndürüyorsa, güncelleme başarılı kabul edilir.
     if (response.status === 204) {
       console.log("📡 API başarıyla güncellendi (204), içerik boş.");
       return {};
     }
 
-    // Eğer durum 200 ise ve içerik boşsa da, başarı olarak kabul edelim.
     const text = await response.text();
     if (!text) {
       console.log("📡 API başarıyla güncellendi, ancak içerik boş.");
@@ -145,7 +188,6 @@ export async function PutRealApi(url, data, navigation) {
 }
 
 // API DELETE Fonksiyonu (401 Kontrolü ile)
-
 export async function DeleteRealApi(url, navigation) {
   try {
     const apiUrl = baseUrl + url;
@@ -157,22 +199,19 @@ export async function DeleteRealApi(url, navigation) {
     console.log("📡 Gerçek API DELETE İsteği:", apiUrl);
     console.log("🛠 Authorization Header:", headers);
 
-    const response = await fetch(apiUrl, {
-      method: "DELETE",
-      headers,
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "DELETE",
+        headers,
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
     }
 
-    // Başarılı ise, genelde 200 veya 204 gibi bir yanıt dönebilir.
     console.log("✅ Silme işlemi başarılı:", await response.text());
     return true;
   } catch (error) {
@@ -193,23 +232,20 @@ export async function PatchRealApi(url, data, navigation) {
     console.log("📡 Gerçek API PATCH İsteği:", apiUrl);
     console.log("📦 Gönderilen Veri:", JSON.stringify(data));
 
-    const response = await fetch(apiUrl, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify(data),
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(data),
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
     }
 
-    // Eğer API 204 (No Content) döndürüyorsa, güncelleme başarılı kabul edilir.
     if (response.status === 204) {
       console.log("📡 API başarıyla güncellendi (204), içerik boş.");
       return {};
@@ -228,8 +264,6 @@ export async function PatchRealApi(url, data, navigation) {
   }
 }
 
-
-
 /**
  * 1) Eğitim Listesini Getir
  * GET /api/Education
@@ -237,8 +271,7 @@ export async function PatchRealApi(url, data, navigation) {
 export async function getEducationList(navigation) {
   try {
     const token = await getToken();
-    const apiUrl = `${baseUrl}Education`; // => /api/Education
-
+    const apiUrl = `${baseUrl}Education`;
     const headers = {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -246,16 +279,8 @@ export async function getEducationList(navigation) {
 
     console.log("📡 GET =>", apiUrl);
 
-    const response = await fetch(apiUrl, { headers });
+    const response = await fetchWithRefresh(apiUrl, { headers }, navigation);
 
-    // 401 ise kullanıcıyı çıkışa yönlendir
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
-
-    // Başarısız yanıt
     if (!response.ok) {
       console.error(`❌ GET Hatası: HTTP ${response.status}`);
       return null;
@@ -267,7 +292,6 @@ export async function getEducationList(navigation) {
       return null;
     }
 
-    // JSON parse et ve döndür
     return JSON.parse(textData);
   } catch (error) {
     console.error("❌ GET EducationList Hatası:", error);
@@ -282,8 +306,7 @@ export async function getEducationList(navigation) {
 export async function addEducation(navigation, educationData) {
   try {
     const token = await getToken();
-    const apiUrl = `${baseUrl}Education`; // => /api/Education
-
+    const apiUrl = `${baseUrl}Education`;
     const headers = {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -292,17 +315,15 @@ export async function addEducation(navigation, educationData) {
     console.log("📡 POST =>", apiUrl);
     console.log("📦 Gönderilen Veri:", educationData);
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(educationData),
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(educationData),
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
@@ -328,8 +349,7 @@ export async function addEducation(navigation, educationData) {
 export async function updateEducation(navigation, educationData) {
   try {
     const token = await getToken();
-    const apiUrl = `${baseUrl}Education`; // => /api/Education
-
+    const apiUrl = `${baseUrl}Education`;
     const headers = {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -338,23 +358,20 @@ export async function updateEducation(navigation, educationData) {
     console.log("📡 PUT =>", apiUrl);
     console.log("📦 Gönderilen Veri:", educationData);
 
-    const response = await fetch(apiUrl, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(educationData),
-    });
-
-    if (response.status === 401) {
-      console.warn("🚨 Yetkisiz erişim! Kullanıcı çıkış yapıyor...");
-      await logout(navigation);
-      return null;
-    }
+    const response = await fetchWithRefresh(
+      apiUrl,
+      {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(educationData),
+      },
+      navigation
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
     }
 
-    // Bazı API'ler 204 (No Content) döndürebilir
     if (response.status === 204) {
       console.log("📡 API başarıyla güncellendi (204). İçerik yok.");
       return {};

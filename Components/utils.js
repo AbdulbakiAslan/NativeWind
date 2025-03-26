@@ -1,5 +1,7 @@
+// utils.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CommonActions } from "@react-navigation/native";
+import { refreshToken } from "../Components/ApiService"; // Refresh fonksiyonunu içe aktarıyoruz
 
 // JWT içindeki bilgileri çözümleme fonksiyonu
 const parseJwt = (token) => {
@@ -13,8 +15,8 @@ const parseJwt = (token) => {
   }
 };
 
-// Token kontrol fonksiyonu (Süresi dolmuşsa false döndürür)
-export const checkToken = async () => {
+// Token kontrol fonksiyonu (token süresi dolduysa refresh token ile yenilemeyi dener)
+export const checkToken = async (navigation) => {
   const token = await AsyncStorage.getItem("userToken");
 
   if (!token) {
@@ -33,9 +35,15 @@ export const checkToken = async () => {
   // Token süresi dolmuş mu?
   const expirationTime = tokenPayload.exp * 1000;
   if (Date.now() >= expirationTime) {
-    console.warn("⏳ Token süresi dolmuş!");
-    await AsyncStorage.removeItem("userToken"); // Token'ı sil
-    return false;
+    console.warn("⏳ Token süresi dolmuş! Refresh token ile yenileme deneniyor...");
+    const refreshed = await refreshToken(navigation);
+    if (!refreshed) {
+      console.warn("⏳ Refresh token yenileme başarısız!");
+      await AsyncStorage.removeItem("userToken");
+      return false;
+    }
+    // Token başarıyla yenilendiyse, artık geçerli
+    return true;
   }
 
   return true;
@@ -50,11 +58,11 @@ export const logout = async (navigation) => {
   });
 };
 
-// 📌 **Her sayfada token kontrolü yapan fonksiyon**
+// Her sayfada token kontrolü yapan fonksiyon; token geçerli değilse (yenileme başarısızsa) kullanıcıyı giriş ekranına yönlendirir.
 export const checkTokenAndRedirect = async (navigation) => {
-  const isValid = await checkToken();
+  const isValid = await checkToken(navigation);
   if (!isValid) {
-    console.warn("🚨 Token süresi dolmuş, giriş ekranına yönlendiriliyor...");
+    console.warn("🚨 Token yenileme başarısız, giriş ekranına yönlendiriliyor...");
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
