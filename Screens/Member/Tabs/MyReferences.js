@@ -55,35 +55,27 @@ const MyReferences = () => {
   const fetchResumeData = async () => {
     try {
       setLoadingResume(true);
-      console.log("fetchResumeData -> calling API: /api/Resume/myResumeData");
       const result = await GetRealApi("Resume/myResumeData");
-      console.log("fetchResumeData -> result:", result);
       if (result && result.id) {
         setResumeData(result);
       }
     } catch (error) {
-      console.error("Resume data fetch error:", error);
     } finally {
       setLoadingResume(false);
     }
   };
 
   const fetchReferences = async () => {
-    console.log("fetchReferences -> resumeData:", resumeData);
     if (!resumeData?.id) {
-      console.log("fetchReferences -> No resume ID found, returning...");
       return;
     }
     try {
       setLoadingReferences(true);
-      console.log("fetchReferences -> calling API: /api/Resume/myResumeData/Reference");
       const result = await GetRealApi("Resume/myResumeData/Reference");
-      console.log("fetchReferences -> result:", result);
       if (Array.isArray(result)) {
         setReferencesData(result);
       }
     } catch (error) {
-      console.error("References fetch error:", error);
     } finally {
       setLoadingReferences(false);
     }
@@ -117,9 +109,7 @@ const MyReferences = () => {
           referenceTypeId: form.referenceTypeId,
           resumeId: form.resumeId,
         };
-        console.log("handleSubmit -> PUT payload:", payload);
         const updated = await PutRealApi("MyReference", payload);
-        console.log("handleSubmit -> PUT response:", updated);
         if (updated) {
           Alert.alert("Başarılı", "Referans güncellendi.");
           fetchReferences();
@@ -137,9 +127,7 @@ const MyReferences = () => {
           referenceTypeId: form.referenceTypeId,
           resumeId: resumeData?.id,
         };
-        console.log("handleSubmit -> POST payload:", payload);
         const created = await PostRealApi("MyReference", payload);
-        console.log("handleSubmit -> POST response:", created);
         if (created) {
           Alert.alert("Başarılı", "Yeni referans eklendi.");
           fetchReferences();
@@ -150,7 +138,6 @@ const MyReferences = () => {
         }
       }
     } catch (error) {
-      console.error("Kayıt işlemi hatası:", error);
       Alert.alert("Hata", "Beklenmedik bir hata oluştu.");
     }
   };
@@ -163,9 +150,7 @@ const MyReferences = () => {
         style: "destructive",
         onPress: async () => {
           try {
-            console.log("handleDelete -> calling DELETE on id:", referenceId);
             const result = await DeleteRealApi(`MyReference/${referenceId}`);
-            console.log("handleDelete -> DELETE response:", result);
             if (result) {
               Alert.alert("Başarılı", "Referans silindi.");
               fetchReferences();
@@ -173,7 +158,6 @@ const MyReferences = () => {
               Alert.alert("Hata", "Silme işlemi başarısız oldu.");
             }
           } catch (error) {
-            console.error("Silme hatası:", error);
           }
         },
       },
@@ -181,7 +165,6 @@ const MyReferences = () => {
   };
 
   const handleEdit = (item) => {
-    console.log("handleEdit -> editing item:", item);
     setForm({
       id: item.id,
       name: item.name,
@@ -243,7 +226,6 @@ const MyReferences = () => {
     );
   };
 
-  console.log("render -> referencesData:", referencesData);
 
   return (
     <View style={styles.container}>
