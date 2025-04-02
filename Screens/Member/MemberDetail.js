@@ -3,7 +3,6 @@ import { useNavigation } from "@react-navigation/native";
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from "react-native";
 
 const MemberDetail = ({ member }) => {
-  // useNavigation hook'u ile navigation nesnesini alıyoruz.
   const navigation = useNavigation();
 
   const imageSource = member.photoPath
@@ -16,137 +15,32 @@ const MemberDetail = ({ member }) => {
       <Image source={imageSource} style={styles.image} />
 
       <View style={styles.detailContainer}>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Oda Sicil Numarası:</Text>
-          <Text style={styles.value}>{member.registrationNumber}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>İsim:</Text>
-          <Text style={styles.value}>{member.name}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Soyisim:</Text>
-          <Text style={styles.value}>{member.lastName}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Doğum Tarihi:</Text>
-          <Text style={styles.value}>{new Date(member.birthDate).toLocaleDateString()}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Cinsiyet:</Text>
-          <Text style={styles.value}>
-            {member.gender === 1
-              ? "Kadın"
-              : member.gender === 2
-              ? "Erkek"
-              : "Belirtilmemiş"}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Telefon:</Text>
-          <Text style={styles.value}>{member.telephone}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Email:</Text>
-          <Text style={styles.value}>{member.email}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Adres:</Text>
-          <Text style={styles.value}>{member.address}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>İlçe:</Text>
-          <Text style={styles.value}>{member.district}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>İl:</Text>
-          <Text style={styles.value}>{member.province}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Askerlik Durumu:</Text>
-          <Text style={styles.value}>
-            {member.militaryServiceStatus === 1
-              ? "Muaf"
-              : member.militaryServiceStatus === 2
-              ? "Tecili"
-              : member.militaryServiceStatus === 3
-              ? "Yapıldı"
-              : member.militaryServiceStatus === 4
-              ? "Yapılıyor"
-              : "Belirtilmemiş"}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Sürücü Belgesi:</Text>
-          <Text style={styles.value}>
-            {member.driversLicenseClass === 1
-              ? "A"
-              : member.driversLicenseClass === 2
-              ? "A1"
-              : member.driversLicenseClass === 3
-              ? "A2"
-              : member.driversLicenseClass === 4
-              ? "B"
-              : member.driversLicenseClass === 5
-              ? "B2"
-              : member.driversLicenseClass === 6
-              ? "C"
-              : member.driversLicenseClass === 7
-              ? "D"
-              : member.driversLicenseClass === 8
-              ? "E"
-              : "Belirtilmemiş"}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Deneyim Durumu:</Text>
-          <Text style={styles.value}>
-            {member.experienceStatus === 0
-              ? "Deneyimi Yok"
-              : member.experienceStatus === 1
-              ? "1 Yıl"
-              : member.experienceStatus === 2
-              ? "2 Yıl"
-              : member.experienceStatus === 3
-              ? "3 Yıl"
-              : member.experienceStatus === 4
-              ? "4 Yıl"
-              : member.experienceStatus === 5
-              ? "5 Yıl"
-              : member.experienceStatus === 6
-              ? "6 Yıl"
-              : member.experienceStatus === 7
-              ? "7 Yıl"
-              : member.experienceStatus === 8
-              ? "8 Yıl"
-              : member.experienceStatus === 9
-              ? "9 Yıl"
-              : member.experienceStatus === 10
-              ? "10 Yıl ve Üzeri"
-              : "Belirtilmemiş"}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>İş Arıyor mu?:</Text>
-          <Text style={styles.value}>
-            {member.isLookingForJob === true
-              ? "Evet"
-              : member.isLookingForJob === false
-              ? "Hayır"
-              : "Belirtilmemiş"}
-          </Text>
-        </View>
-        {member.notes ? (
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Notlar:</Text>
-            <Text style={styles.value}>{member.notes}</Text>
-          </View>
-        ) : null}
+        {/* Örnek alanlar */}
+        <DetailRow label="Oda Sicil Numarası" value={member.registrationNumber} />
+        <DetailRow label="İsim" value={member.name} />
+        <DetailRow label="Soyisim" value={member.lastName} />
+        <DetailRow
+          label="Doğum Tarihi"
+          value={new Date(member.birthDate).toLocaleDateString()}
+        />
+        <DetailRow label="Cinsiyet" value={member.gender === 1 ? "Kadın" : member.gender === 2 ? "Erkek" : "Belirtilmemiş"} />
+        <DetailRow label="Telefon" value={member.telephone} />
+        <DetailRow label="Email" value={member.email} />
+        <DetailRow label="Adres" value={member.address} />
+        <DetailRow label="İlçe" value={member.district} />
+        <DetailRow label="İl" value={member.province} />
+        <DetailRow label="Askerlik Durumu" value={String(member.militaryServiceStatus)} />
+        <DetailRow label="Sürücü Belgesi" value={String(member.driversLicenseClass)} />
+        <DetailRow label="Deneyim" value={String(member.experienceStatus)} />
+        <DetailRow label="İş Arıyor mu?" value={member.isLookingForJob ? "Evet" : "Hayır"} />
+        <DetailRow label="İş Arama Mailine Cevap" value={member.isAnsweredLookingForJobMail ? "Evet" : "Hayır"} />
+        <DetailRow label="Notlar" value={member.notes} />
       </View>
 
       <TouchableOpacity
         style={styles.editButton}
         onPress={() => {
+          // Düzenleme ekranına yönlendirme (varsa)
           navigation.navigate("EditMember", { member });
         }}
       >
@@ -155,6 +49,14 @@ const MemberDetail = ({ member }) => {
     </ScrollView>
   );
 };
+
+// Yardımcı küçük bileşen:
+const DetailRow = ({ label, value }) => (
+  <View style={styles.detailRow}>
+    <Text style={styles.label}>{label}:</Text>
+    <Text style={styles.value}>{value}</Text>
+  </View>
+);
 
 export default MemberDetail;
 
@@ -186,11 +88,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   detailRow: {
     flexDirection: "row",
@@ -198,13 +95,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: "bold",
-    width: 150,
+    width: 180,
     color: "#555",
   },
   value: {
     flex: 1,
     color: "#777",
-    flexWrap: "wrap",
   },
   editButton: {
     backgroundColor: "#10B981",
@@ -213,11 +109,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: "center",
     marginTop: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
   },
   editButtonText: {
     color: "#fff",

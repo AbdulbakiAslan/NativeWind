@@ -10,36 +10,40 @@ import {
   Platform,
   KeyboardAvoidingView,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
+import { PostRealApi } from "../../Components/ApiService";
 
 const AddMember = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
-  // Üye form alanlarımız
+  // Form başlangıç durumu
   const initialFormState = {
     registrationNumber: "",
-    firstName: "",
+    name: "",
     lastName: "",
+    birthDate: new Date(), // Tarihi JS Date nesnesi olarak tutuyoruz
     gender: null,
-    phone: "",
+    telephone: "",
     email: "",
-    militaryStatus: null,
-    licenseClass: null,
-    experience: null,
-    jobSeeking: null,
     address: "",
     district: "",
     province: "",
+    militaryServiceStatus: null,
+    driversLicenseClass: null,
+    experienceStatus: null,
+    isLookingForJob: null,
+    isAnsweredLookingForJobMail: null,
+    notes: "",
   };
 
   const [form, setForm] = useState(initialFormState);
-  const [birthDate, setBirthDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [photoURI, setPhotoURI] = useState(null);
 
@@ -77,52 +81,68 @@ const AddMember = () => {
   // Tarih seçici değişim fonksiyonu
   const onDateChange = (event, selectedDate) => {
     if (selectedDate) {
-      setBirthDate(selectedDate);
+      handleChange("birthDate", selectedDate);
     }
     setShowDatePicker(Platform.OS === "ios");
   };
 
-  // API çağrısı olmadan form gönderme işlemi
+  // Form gönderme ve API'ye POST isteği yapma
   const handleSubmit = async () => {
     setLoading(true);
+
+    // Seçilen resmi base64'e dönüştür
     const photoBase64 = photoURI ? await convertToBase64(photoURI) : null;
 
+    // Gönderilecek veri: API endpoint'inizin beklediği JSON yapısı
     const dataToSend = {
       photoPath: photoBase64,
-      registrationNumber: Number(form.registrationNumber),
-      name: form.firstName,
+      registrationNumber: form.registrationNumber,
+      name: form.name,
       lastName: form.lastName,
-      birthDate: birthDate.toISOString(),
+      birthDate: form.birthDate.toISOString(),
       gender: form.gender,
-      telephone: form.phone,
+      telephone: form.telephone,
       email: form.email,
       address: form.address,
       district: form.district,
       province: form.province,
-      militaryServiceStatus: form.militaryStatus,
-      driversLicenseClass: form.licenseClass,
-      experienceStatus: form.experience,
-      isLookingForJob: form.jobSeeking,
-      isAnsweredLookingForJobMail: false,
+      militaryServiceStatus: form.militaryServiceStatus,
+      driversLicenseClass: form.driversLicenseClass,
+      experienceStatus: form.experienceStatus,
+      isLookingForJob: form.isLookingForJob,
+      isAnsweredLookingForJobMail: form.isAnsweredLookingForJobMail,
+      notes: form.notes,
     };
 
     console.log("Gönderilecek veri:", dataToSend);
-    alert("Form gönderildi. EditMemberTabs ekranına yönlendiriliyorsunuz.");
 
-    // Formu sıfırlama işlemi
+    // API POST çağrısı: POST /api/Resume/myResumeData
+    const response = await PostRealApi("Resume/myResumeData", dataToSend, navigation);
+    if (response) {
+      Alert.alert("Başarılı", "Üye (Resume) başarıyla eklendi.");
+      // Üye başarıyla oluşturulduktan sonra MemberDetail ekranına yönlendiriyoruz
+      navigation.navigate("MemberDetail", { member: response });
+    } else {
+      Alert.alert("Hata", "Üye ekleme/güncelleme sırasında hata oluştu.");
+    }
+
+    // Formu sıfırlama
     setForm(initialFormState);
-    setBirthDate(new Date());
     setPhotoURI(null);
     setLoading(false);
-
-    // Üye ekleme işleminden sonra EditMemberTabs ekranına yönlendirme
-    navigation.navigate("EditMemberTabs", { member: dataToSend });
   };
 
+  // Picker seçenekleri (örnek)
   const genderOptions = [
     { label: "Cinsiyet Seçin", value: null },
     { label: "Kadın", value: 1 },
     { label: "Erkek", value: 2 },
+  ];
+
+  const boolOptions = [
+    { label: "Seçiniz", value: null },
+    { label: "Evet", value: true },
+    { label: "Hayır", value: false },
   ];
 
   const militaryOptions = [
@@ -160,12 +180,6 @@ const AddMember = () => {
     { label: "10 Yıl ve Üzeri", value: 10 },
   ];
 
-  const jobSeekingOptions = [
-    { label: "İş Arıyor mu?", value: null },
-    { label: "Evet", value: true },
-    { label: "Hayır", value: false },
-  ];
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -180,7 +194,7 @@ const AddMember = () => {
         )}
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Yeni Üye Ekle</Text>
+          <Text style={styles.title}>Yeni Üye / Özgeçmiş Ekle</Text>
 
           <TextInput
             placeholder="Oda Sicil Numarası"
@@ -190,8 +204,8 @@ const AddMember = () => {
           />
           <TextInput
             placeholder="İsim"
-            value={form.firstName}
-            onChangeText={(text) => handleChange("firstName", text)}
+            value={form.name}
+            onChangeText={(text) => handleChange("name", text)}
             style={styles.input}
           />
           <TextInput
@@ -201,21 +215,23 @@ const AddMember = () => {
             style={styles.input}
           />
 
+          {/* Doğum Tarihi */}
           <TouchableOpacity
             style={styles.datePickerButton}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text>{birthDate.toLocaleDateString()}</Text>
+            <Text>{form.birthDate.toLocaleDateString()}</Text>
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker
-              value={birthDate}
+              value={form.birthDate}
               mode="date"
               display="default"
               onChange={onDateChange}
             />
           )}
 
+          {/* Cinsiyet */}
           <Picker
             selectedValue={form.gender}
             onValueChange={(v) => handleChange("gender", v)}
@@ -223,7 +239,7 @@ const AddMember = () => {
           >
             {genderOptions.map((option) => (
               <Picker.Item
-                key={option.value}
+                key={String(option.value)}
                 label={option.label}
                 value={option.value}
               />
@@ -232,8 +248,8 @@ const AddMember = () => {
 
           <TextInput
             placeholder="Telefon"
-            value={form.phone}
-            onChangeText={(text) => handleChange("phone", text)}
+            value={form.telephone}
+            onChangeText={(text) => handleChange("telephone", text)}
             style={styles.input}
             keyboardType="phone-pad"
           />
@@ -245,56 +261,75 @@ const AddMember = () => {
             keyboardType="email-address"
           />
 
+          {/* Askerlik Durumu */}
           <Picker
-            selectedValue={form.militaryStatus}
-            onValueChange={(v) => handleChange("militaryStatus", v)}
+            selectedValue={form.militaryServiceStatus}
+            onValueChange={(v) => handleChange("militaryServiceStatus", v)}
             style={styles.picker}
           >
             {militaryOptions.map((option) => (
               <Picker.Item
-                key={option.value}
+                key={String(option.value)}
                 label={option.label}
                 value={option.value}
               />
             ))}
           </Picker>
 
+          {/* Sürücü Belgesi */}
           <Picker
-            selectedValue={form.licenseClass}
-            onValueChange={(v) => handleChange("licenseClass", v)}
+            selectedValue={form.driversLicenseClass}
+            onValueChange={(v) => handleChange("driversLicenseClass", v)}
             style={styles.picker}
           >
             {driversLicenseOptions.map((option) => (
               <Picker.Item
-                key={option.value}
+                key={String(option.value)}
                 label={option.label}
                 value={option.value}
               />
             ))}
           </Picker>
 
+          {/* Deneyim */}
           <Picker
-            selectedValue={form.experience}
-            onValueChange={(v) => handleChange("experience", v)}
+            selectedValue={form.experienceStatus}
+            onValueChange={(v) => handleChange("experienceStatus", v)}
             style={styles.picker}
           >
             {experienceOptions.map((option) => (
               <Picker.Item
-                key={option.value}
+                key={String(option.value)}
                 label={option.label}
                 value={option.value}
               />
             ))}
           </Picker>
 
+          {/* İş Arıyor mu? */}
           <Picker
-            selectedValue={form.jobSeeking}
-            onValueChange={(v) => handleChange("jobSeeking", v)}
+            selectedValue={form.isLookingForJob}
+            onValueChange={(v) => handleChange("isLookingForJob", v)}
             style={styles.picker}
           >
-            {jobSeekingOptions.map((option) => (
+            {boolOptions.map((option) => (
               <Picker.Item
-                key={option.value}
+                key={String(option.value)}
+                label={option.label}
+                value={option.value}
+              />
+            ))}
+          </Picker>
+
+          {/* İş Arama Mailine Cevap Verildi mi? */}
+          <Picker
+            selectedValue={form.isAnsweredLookingForJobMail}
+            onValueChange={(v) => handleChange("isAnsweredLookingForJobMail", v)}
+            style={styles.picker}
+          >
+            {boolOptions.map((option) => (
+              <Picker.Item
+                key={String(option.value)}
                 label={option.label}
                 value={option.value}
               />
@@ -320,22 +355,29 @@ const AddMember = () => {
             style={styles.input}
           />
 
-<TouchableOpacity
-  style={styles.submitButton}
-  onPress={() => navigation.navigate("EditMember")}
->
-  {loading ? (
-    <ActivityIndicator color="#fff" />
-  ) : (
-    <Text style={styles.submitButtonText}>✔ Üye Ekle</Text>
-  )}
-</TouchableOpacity>
+          {/* Notlar */}
+          <TextInput
+            placeholder="Notlar"
+            value={form.notes}
+            onChangeText={(text) => handleChange("notes", text)}
+            style={styles.input}
+            multiline
+          />
 
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>✔ Kaydet</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
+
+export default AddMember;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -402,5 +444,3 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
 });
-
-export default AddMember;

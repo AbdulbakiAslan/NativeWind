@@ -1,11 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-
-// API fonksiyonumuz
 import { GetRealApi } from "../../Components/ApiService";
-
-// Yönlendireceğimiz bileşenler
 import AddMember from "./AddMember";
 import MemberDetail from "./MemberDetail";
 
@@ -16,7 +12,10 @@ const MemberScreen = () => {
 
   const fetchMemberData = async () => {
     setLoading(true);
+
+    // GET => /api/Resume/myResumeData
     const response = await GetRealApi("Resume/myResumeData", navigation);
+    // Eğer 404 veya herhangi bir nedenden ötürü null dönerse:
     if (!response) {
       setMember(null);
     } else {
@@ -39,10 +38,12 @@ const MemberScreen = () => {
     );
   }
 
+  // Veri yoksa form göster
   if (!member) {
     return <AddMember />;
   }
 
+  // Veri varsa detay sayfası
   return <MemberDetail member={member} />;
 };
 
