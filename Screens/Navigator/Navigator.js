@@ -4,7 +4,11 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet } from "react-native";
 
-// Mevcut ekranlar
+// API servisi
+import { GetRealApi } from "../../Components/ApiService";
+import { checkToken } from "../../Components/utils";
+
+// Ekranlar
 import { HomeScreen } from "../Home/HomeScreen";
 import { ProfileScreen } from "../Profiles/ProfileScreen";
 import { ProfileDetail } from "../Profiles/ProfileDetail";
@@ -21,35 +25,42 @@ import EditMemberTabs from "../Member/Tabs/EditMemberTabs";
 import MemberDetail from "../Member/MemberDetail";
 import AddMember from "../Member/AddMember";
 
-
-
 import { Login } from "../Login/Login";
 import SignUpMember from "../SignUp/SignUpMember";
 import SignUpCompany from "../SignUp/SignUpCompany";
 
-import { checkToken } from "../../Components/utils";
-
 const Drawer = createDrawerNavigator();
 
 export function MyDrawer({ setIsLoggedIn }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
-    const verifyToken = async () => {
+    (async () => {
+      // 1. Token geçerliliğini kontrol et
       const tokenValid = await checkToken();
       if (!tokenValid) {
         console.warn("Token süresi dolmuş, kullanıcı çıkış yapıyor...");
         await AsyncStorage.removeItem("userToken");
         setIsLoggedIn(false);
-      } else {
-        setIsAuthenticated(true);
+        return;
       }
-    };
 
-    verifyToken();
-  }, []);
+      // 2. Token geçerliyse, kullanıcı bilgilerini API'den çek
+      // API servisin navigation parametresine ihtiyaç duyduğunda dummy obje gönderiyoruz.
+      const dummyNavigation = { dispatch: () => {} };
+      const userData = await GetRealApi("GetMyUserData", dummyNavigation);
 
-  if (isAuthenticated === null) {
+      if (userData && userData.roles && userData.roles.length > 0) {
+        // Örneğin, ilk rolü kullanıyoruz ("admin" veya "member")
+        setRole(userData.roles[0].toLowerCase().trim());
+      }
+
+      setIsLoading(false);
+    })();
+  }, [setIsLoggedIn]);
+
+  if (isLoading || role === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -57,9 +68,13 @@ export function MyDrawer({ setIsLoggedIn }) {
     );
   }
 
+  // Role bilgisine göre başlangıç ekranı belirle
+  const initialRoute =
+    role === "admin" ? "Home" : role === "member" ? "MemberScreen" : "Home";
+
   return (
     <Drawer.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: "#ff0000" },
         headerTintColor: "#fff",
@@ -67,14 +82,21 @@ export function MyDrawer({ setIsLoggedIn }) {
         headerRight: () => <ExitButton setIsLoggedIn={setIsLoggedIn} />,
       }}
     >
-      {/* Görünür menüdeki ekranlar */}
-      <Drawer.Screen name="Home" component={HomeScreen} />
-      <Drawer.Screen name="Profile" component={ProfileScreen} />
-      <Drawer.Screen name="UsersScreen" component={UsersScreen} />
-      <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
-      <Drawer.Screen name="MemberScreen" component={MemberScreen} />
+      {/* Rol tabanlı ekran gösterimi */}
+      {role === "admin" && (
+        <>
+          <Drawer.Screen name="Home" component={HomeScreen} />
+          <Drawer.Screen name="Profile" component={ProfileScreen} />
+          <Drawer.Screen name="UsersScreen" component={UsersScreen} />
+          <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
+        </>
+      )}
 
-      {/* Giriş ve Kayıt ekranları (Menüde görünmesin diye display none) */}
+      {role === "member" && (
+        <Drawer.Screen name="MemberScreen" component={MemberScreen} />
+      )}
+
+      {/* Giriş ve Kayıt ekranları (menüde görünmesin diye) */}
       <Drawer.Screen
         name="Login"
         component={Login}
@@ -188,3 +210,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+
+export default MyDrawer;
