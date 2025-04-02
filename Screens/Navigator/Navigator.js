@@ -37,7 +37,6 @@ export function MyDrawer({ setIsLoggedIn }) {
 
   useEffect(() => {
     (async () => {
-      // 1. Token geçerliliğini kontrol et
       const tokenValid = await checkToken();
       if (!tokenValid) {
         console.warn("Token süresi dolmuş, kullanıcı çıkış yapıyor...");
@@ -46,14 +45,22 @@ export function MyDrawer({ setIsLoggedIn }) {
         return;
       }
 
-      // 2. Token geçerliyse, kullanıcı bilgilerini API'den çek
       // API servisin navigation parametresine ihtiyaç duyduğunda dummy obje gönderiyoruz.
       const dummyNavigation = { dispatch: () => {} };
       const userData = await GetRealApi("GetMyUserData", dummyNavigation);
 
       if (userData && userData.roles && userData.roles.length > 0) {
-        // Örneğin, ilk rolü kullanıyoruz ("admin" veya "member")
-        setRole(userData.roles[0].toLowerCase().trim());
+        // Tüm rolleri normalize ediyoruz: küçük harfe çevirip boşlukları temizliyoruz
+        const roles = userData.roles.map(r => r.toLowerCase().trim());
+        // Eğer "admin" rolü varsa onu kullan, yoksa "member" kontrolü
+        if (roles.includes("admin")) {
+          setRole("admin");
+        } else if (roles.includes("member")) {
+          setRole("member");
+        } else {
+          // Farklı bir rol varsa, örneğin ilkini kullanabilirsiniz
+          setRole(roles[0]);
+        }
       }
 
       setIsLoading(false);
@@ -82,7 +89,7 @@ export function MyDrawer({ setIsLoggedIn }) {
         headerRight: () => <ExitButton setIsLoggedIn={setIsLoggedIn} />,
       }}
     >
-      {/* Rol tabanlı ekran gösterimi */}
+      {/* Admin rolüne sahip kullanıcılar için ekranlar */}
       {role === "admin" && (
         <>
           <Drawer.Screen name="Home" component={HomeScreen} />
@@ -92,6 +99,7 @@ export function MyDrawer({ setIsLoggedIn }) {
         </>
       )}
 
+      {/* Sadece member rolüne sahip kullanıcılar için ekran */}
       {role === "member" && (
         <Drawer.Screen name="MemberScreen" component={MemberScreen} />
       )}
