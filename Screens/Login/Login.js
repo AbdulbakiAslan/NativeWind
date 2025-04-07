@@ -17,25 +17,38 @@ export const Login = ({ navigation, setIsLoggedIn }) => {
 
   const handleLogin = async () => {
     try {
-      // API çağrısı ve token işlemleri
-      const response = await PostRealApi("Authentication/CreateTokenForUser", {
-        email,
-        password,
-      });
+      // API çağrısı ve token işlemleri, navigation parametresi de ekleniyor.
+      const response = await PostRealApi(
+        "Authentication/CreateTokenForUser",
+        { email, password },
+        navigation
+      );
 
       if (!response) {
         Alert.alert("Hata", "Sunucudan yanıt alınamadı.");
         return;
       }
 
-      // Hem access token hem de refresh token varsa, her ikisini de saklayın
+      // Sunucudan "User is Not Approved" mesajı geliyorsa:
+      if (response.title === "User is Not Approved") {
+        Alert.alert(
+          "Hesabınız Onaylanmadı",
+          "Henüz hesabınız onaylanmadı. Lütfen onay sürecini bekleyin."
+        );
+        return;
+      }
+
+      // Eğer hem access token hem de refresh token geldiyse
       if (response.accessToken && response.refreshToken) {
         await AsyncStorage.setItem("userToken", response.accessToken);
         await AsyncStorage.setItem("refreshToken", response.refreshToken);
         setIsLoggedIn(true);
-        console.log("Access ve Refresh Token başarıyla kaydedildi:", response.accessToken);
+        console.log(
+          "Access ve Refresh Token başarıyla kaydedildi:",
+          response.accessToken
+        );
       } else if (response.accessToken) {
-        // Sadece access token mevcutsa, onu kaydet
+        // Sadece access token mevcutsa onu kaydet
         await AsyncStorage.setItem("userToken", response.accessToken);
         setIsLoggedIn(true);
         console.log("Sadece Access Token kaydedildi:", response.accessToken);

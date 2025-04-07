@@ -112,36 +112,63 @@ export async function PostRealApi(url, data, navigation) {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
     };
+
     console.log("📡 Gerçek API POST İsteği:", apiUrl);
     console.log("📦 Gönderilen Veri:", JSON.stringify(data));
     console.log("🛠 Authorization Header:", headers);
 
-    const response = await fetchWithRefresh(
-      apiUrl,
-      {
+    // Eğer token yoksa, login gibi token üretimi yapılan çağrıda doğrudan fetch kullanıyoruz.
+    let response;
+    if (!token) {
+      response = await fetch(apiUrl, {
         method: "POST",
         headers,
         body: JSON.stringify(data),
-      },
-      navigation
-    );
+      });
+    } else {
+      response = await fetchWithRefresh(
+        apiUrl,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(data),
+        },
+        navigation
+      );
+    }
 
+    // Dönen cevabı önce metin olarak alıyoruz.
+    const responseBody = await response.text();
+
+    let parsedData = null;
+    try {
+      parsedData = JSON.parse(responseBody);
+    } catch (e) {
+      console.warn("Dönen yanıt JSON formatında değil veya parse edilemedi:", e);
+    }
+
+    // Eğer token yoksa (yani giriş işlemi) ve gelen yanıt "User is Not Approved" mesajını içeriyorsa
+    if (!token && parsedData?.title === "User is Not Approved") {
+      return parsedData;
+    }
+
+    // Eğer HTTP hatası varsa, normal akışa göre hata fırlatıyoruz.
     if (!response.ok) {
       throw new Error(`HTTP Hatası: ${response.status}`);
     }
 
-    const jsonResponse = await response.text();
-    if (!jsonResponse) {
+    if (!responseBody) {
       console.warn("⚠️ API boş yanıt döndürdü!");
       return null;
     }
 
-    return JSON.parse(jsonResponse);
+    return parsedData;
   } catch (error) {
     console.log("❌ Gerçek API POST Hatası:", error);
     return null;
   }
 }
+
 
 // API PUT Fonksiyonu (401 Kontrolü ile)
 export async function PutRealApi(url, data, navigation) {
