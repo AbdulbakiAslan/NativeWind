@@ -20,7 +20,6 @@ const logout = async (navigation) => {
   );
 };
 
-// Refresh token işlemi: Backend'deki RefreshToken endpoint'ine istek yapar.
 export async function refreshToken(navigation) {
   try {
     const storedRefreshToken = await AsyncStorage.getItem("refreshToken");
@@ -28,7 +27,7 @@ export async function refreshToken(navigation) {
       console.warn("Refresh token bulunamadı!");
       return false;
     }
-    const refreshUrl = baseUrl + "Authentication/RefreshToken";
+    const refreshUrl = baseUrl + "Authentication/CreateTokenByRefreshToken";
     const response = await fetch(refreshUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
