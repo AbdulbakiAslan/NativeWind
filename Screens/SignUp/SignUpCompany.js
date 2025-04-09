@@ -14,7 +14,7 @@ import { PostRealApi } from "../../Components/ApiService";
 const SignUpCompany = ({ navigation }) => {
   const [companyName, setCompanyName] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
-  const [firstName, setFirstName] = useState("");
+  const [name, setName] = useState("");               
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,13 +23,11 @@ const SignUpCompany = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Kayıt butonuna basıldığında tetiklenecek fonksiyon
   const handleSignUp = async () => {
-    // 1) Tüm alanların doldurulup doldurulmadığını kontrol edelim
     if (
       !companyName.trim() ||
       !companyAddress.trim() ||
-      !firstName.trim() ||
+      !name.trim() ||                
       !lastName.trim() ||
       !username.trim() ||
       !phone.trim() ||
@@ -41,13 +39,11 @@ const SignUpCompany = ({ navigation }) => {
       return;
     }
 
-    // 2) Üyelik sözleşmesi onay kontrolü
     if (!termsAccepted) {
       Alert.alert("Uyarı", "Üyelik sözleşmesini kabul etmelisiniz.");
       return;
     }
 
-    // 3) Şifre validasyonu (en az 6 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter)
     const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*]).{6,}$/;
     if (!passwordRegex.test(password)) {
       Alert.alert(
@@ -57,35 +53,32 @@ const SignUpCompany = ({ navigation }) => {
       return;
     }
 
-    // 4) Şifrelerin eşleşme kontrolü
     if (password !== confirmPassword) {
       Alert.alert("Uyarı", "Şifreler eşleşmiyor!");
       return;
     }
 
     try {
-      // 5) /api/User/SignUpCompany endpoint’ine POST isteği atıyoruz
       const result = await PostRealApi(
         "User/SignUpCompany",
         {
           companyName: companyName,
           companyAddress: companyAddress,
-          firstName: firstName,
+          name: name,                   
           lastName: lastName,
-          userName: username, // API 'userName' bekliyorsa bu şekilde gönderiyoruz
+          userName: username,           
           phone: phone,
           email: email,
           password: password,
-          rePassword: confirmPassword, // confirmPassword alanını rePassword olarak gönderiyoruz
-          checkTermsAndConditions: termsAccepted, // termsAccepted → checkTermsAndConditions
+          rePassword: confirmPassword,  
+          checkTermsAndConditions: termsAccepted,  
         },
         navigation
       );
 
-      // 6) API boş yanıt döndürse de kayıt başarılıysa ekrana bildirim veriyoruz
       if (result || result === null) {
         Alert.alert("Başarılı", "Şirket hesabı oluşturuldu!");
-        navigation.navigate("Login"); // Başarılı ise Login ekranına yönlendiriyoruz
+        navigation.navigate("Login");
       } else {
         Alert.alert("Hata", "Kayıt sırasında bir hata oluştu.");
       }
@@ -102,7 +95,7 @@ const SignUpCompany = ({ navigation }) => {
         <Text style={styles.subtitle}>
           Şirketinizde Mühendis istihdam etmek istiyorsanız bu sayfadan hesap oluşturabilirsiniz
         </Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="Şirket Adı"
@@ -119,8 +112,8 @@ const SignUpCompany = ({ navigation }) => {
         <TextInput
           style={styles.input}
           placeholder="Adı"
-          value={firstName}
-          onChangeText={setFirstName}
+          value={name}               
+          onChangeText={setName}
         />
         <TextInput
           style={styles.input}
