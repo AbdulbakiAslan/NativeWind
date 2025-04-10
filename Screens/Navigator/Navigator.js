@@ -24,6 +24,8 @@ import MemberScreen from "../Member/MemberScreen";
 import EditMemberTabs from "../Member/Tabs/EditMemberTabs";
 import MemberDetail from "../Member/MemberDetail";
 import AddMember from "../Member/AddMember";
+import CompanyScreen from "../Company/CompanyScreen";
+import JobPostingList from "../Company/JobPostingList";
 
 import { Login } from "../Login/Login";
 import SignUpMember from "../SignUp/SignUpMember";
@@ -77,7 +79,7 @@ export function MyDrawer({ setIsLoggedIn }) {
 
   // Role bilgisine göre başlangıç ekranı belirle
   const initialRoute =
-    role === "admin" ? "Home" : role === "member" ? "MemberScreen" : "Home";
+    role === "admin" ? "Home" : role === "member" ? "MemberScreen" : role === "company" ? "CompanyScreen" : "Home";
 
   return (
     <Drawer.Navigator
@@ -102,6 +104,15 @@ export function MyDrawer({ setIsLoggedIn }) {
       {/* Sadece member rolüne sahip kullanıcılar için ekran */}
       {role === "member" && (
         <Drawer.Screen name="MemberScreen" component={MemberScreen} />
+      )}
+
+    {/* Sadece company rolüne sahip kullanıcılar için ekran */}
+      {role === "company" && (
+        <>
+        <Drawer.Screen name="CompanyScreen" component={CompanyScreen} />
+        <Drawer.Screen name="JobPostingList" component={JobPostingList} />
+        </>
+
       )}
 
       {/* Giriş ve Kayıt ekranları (menüde görünmesin diye) */}
