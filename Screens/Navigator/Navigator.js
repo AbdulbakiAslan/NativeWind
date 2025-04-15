@@ -26,6 +26,7 @@ import MemberDetail from "../Member/MemberDetail";
 import AddMember from "../Member/AddMember";
 import CompanyScreen from "../Company/CompanyScreen";
 import JobPostingList from "../Company/JobPostingList";
+import CompaniesScreen from "../Companies/CompaniesScreen";
 
 import { Login } from "../Login/Login";
 import SignUpMember from "../SignUp/SignUpMember";
@@ -94,10 +95,15 @@ export function MyDrawer({ setIsLoggedIn }) {
       {/* Admin rolüne sahip kullanıcılar için ekranlar */}
       {role === "admin" && (
         <>
-          <Drawer.Screen name="Home" component={HomeScreen} />
-          <Drawer.Screen name="Profile" component={ProfileScreen} />
-          <Drawer.Screen name="UsersScreen" component={UsersScreen} />
-          <Drawer.Screen name="ResumesScreen" component={ResumesScreen} />
+          <Drawer.Screen name="Home" component={HomeScreen}   options={{ drawerLabel: 'Panel' }} 
+ />
+          {/*<Drawer.Screen name="Profile" component={ProfileScreen}/>*/}
+          <Drawer.Screen name="UsersScreen" component={UsersScreen}  options={{ drawerLabel: 'Kullanıcılar' }} />
+          <Drawer.Screen name="ResumesScreen" component={ResumesScreen}  options={{ drawerLabel: 'Özgeçmişler' }} />
+          <Drawer.Screen name="CompaniesScreen" component={CompaniesScreen}  options={{ drawerLabel: 'Şirketler' }} />
+          <Drawer.Screen name="JobPostingList" component={JobPostingList}  options={{ drawerLabel: 'İş İlanları' }} />
+
+
         </>
       )}
 
