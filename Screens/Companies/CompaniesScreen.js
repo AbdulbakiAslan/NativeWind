@@ -3,166 +3,188 @@ import {
   View,
   Text,
   TextInput,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
   ActivityIndicator,
   StyleSheet,
-  TouchableOpacity,
-  ScrollView,
+  Modal,
   ToastAndroid,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { GetRealApi, PutRealApi } from "../../Components/ApiService";
+import { GetRealApi, PostRealApi } from "../../Components/ApiService";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const CompaniesScreen = () => {
-  const [companyData, setCompanyData] = useState(null);
-  const [editedData, setEditedData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
   const navigation = useNavigation();
+  const [companies, setCompanies] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCompanyData = async () => {
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [newCompany, setNewCompany] = useState({ name: "", address: "", phone: "", email: "" });
+
+  const fetchCompanies = async () => {
     setLoading(true);
-    const response = await GetRealApi("GetMyUserData", navigation);
-    if (response && response.roles.includes("company")) {
-      const data = {
-        name: response.name || "",
-        email: response.email || "",
-        address: response.address || "Ulutek teknopark",
-        phone: response.phone || "05538961629",
-      };
-      setCompanyData(data);
-      setEditedData(data);
-    } else {
-      setCompanyData(null);
-    }
+    const resp = await GetRealApi("Company", navigation);
+    const list = Array.isArray(resp) ? resp : [];
+    setCompanies(list);
+    setFiltered(list);
     setLoading(false);
   };
 
   useFocusEffect(
     useCallback(() => {
-      fetchCompanyData();
+      fetchCompanies();
     }, [navigation])
   );
 
-  const handleChange = (key, value) => {
-    setEditedData((prev) => ({ ...prev, [key]: value }));
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchCompanies().finally(() => setRefreshing(false));
   };
 
-  const handleSave = async () => {
-    if (!editedData.phone || editedData.phone.trim() === "") {
-      ToastAndroid.show("Telefon boş olamaz!", ToastAndroid.SHORT);
+  const handleSearch = text => {
+    setSearchText(text);
+    if (!text) {
+      setFiltered(companies);
       return;
     }
+    const ft = companies.filter(item =>
+      `${item.name} ${item.address} ${item.phone} ${item.email}`
+        .toLowerCase()
+        .includes(text.toLowerCase())
+    );
+    setFiltered(ft);
+  };
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(editedData.email)) {
-    ToastAndroid.show("Geçersiz email formatı!", ToastAndroid.SHORT);
-    return;
-  }
+  const handleAddChange = (key, value) => {
+    setNewCompany(prev => ({ ...prev, [key]: value }));
+  };
 
-    const result = await PutRealApi("MyCompany", editedData, navigation);
+  const handleAddSubmit = async () => {
+    if (!newCompany.name.trim()) {
+      ToastAndroid.show("Şirket İsmi boş olamaz!", ToastAndroid.SHORT);
+      return;
+    }
+    const result = await PostRealApi("Company", newCompany, navigation);
     if (result) {
-      setCompanyData(editedData);
-      setIsEditing(false);
-      ToastAndroid.show("✅ Başarıyla güncellendi!", ToastAndroid.SHORT);
+      ToastAndroid.show("✅ Şirket eklendi!", ToastAndroid.SHORT);
+      setAddModalVisible(false);
+      setNewCompany({ name: "", address: "", phone: "", email: "" });
+      fetchCompanies();
+    } else {
+      ToastAndroid.show("❌ Ekleme başarısız.", ToastAndroid.SHORT);
     }
   };
 
-  const handleCancel = () => {
-    setEditedData(companyData);
-    setIsEditing(false);
+  const handleAddCancel = () => {
+    setAddModalVisible(false);
+    setNewCompany({ name: "", address: "", phone: "", email: "" });
   };
+
+  const renderItem = ({ item }) => (
+    <View style={styles.cardContainer}>
+      <Text style={styles.label}>Şirket İsmi</Text>
+      <Text style={styles.value}>{item.name}</Text>
+
+      <Text style={styles.label}>Adres</Text>
+      <Text style={styles.value}>{item.address}</Text>
+
+      <Text style={styles.label}>Telefon</Text>
+      <Text style={styles.value}>{item.phone}</Text>
+
+      <Text style={styles.label}>Email</Text>
+      <Text style={styles.value}>{item.email}</Text>
+
+      <View style={styles.iconRow}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("CompanyDetail", { id: item.id })}
+          style={styles.iconButton}
+        >
+          <MaterialIcons name="info" size={24} color="green" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("EditCompany", { id: item.id })}
+          style={styles.iconButton}
+        >
+          <MaterialIcons name="edit" size={24} color="blue" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => {/* TODO: silme */}} style={styles.iconButton}>
+          <MaterialIcons name="delete" size={24} color="red" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
-      </View>
-    );
-  }
-
-  if (!companyData) {
-    return (
       <View style={styles.centered}>
-        <Text style={{ color: "gray" }}>Şirket verisi bulunamadı.</Text>
+        <ActivityIndicator size="large" color="blue" />
       </View>
     );
   }
 
   return (
     <View style={styles.fullPage}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Şirket Detayları</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>İsim</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={editedData.name}
-              onChangeText={(text) => handleChange("name", text)}
-            />
-          ) : (
-            <Text style={styles.value}>{companyData.name}</Text>
-          )}
+      {/* Arama + Butonlar */}
+      <View style={styles.topBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Filtrele..."
+          value={searchText}
+          onChangeText={handleSearch}
+        />
+        <TouchableOpacity style={styles.downloadBtn} onPress={() => {/* TODO: İndir */}}>
+          <Text style={styles.downloadBtnText}>İNDİR</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
+          <Text style={styles.addBtnText}>EKLE</Text>
+        </TouchableOpacity>
+      </View>
 
-          <Text style={styles.label}>Adres</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={editedData.address}
-              onChangeText={(text) => handleChange("address", text)}
-            />
-          ) : (
-            <Text style={styles.value}>{companyData.address}</Text>
-          )}
+      {/* Liste */}
+      <FlatList
+        data={filtered}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      />
 
-          <Text style={styles.label}>Telefon</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={editedData.phone}
-              onChangeText={(text) => handleChange("phone", text)}
-              keyboardType="phone-pad"
-            />
-          ) : (
-            <Text style={styles.value}>{companyData.phone}</Text>
-          )}
+      {/* Ekle Modal */}
+      <Modal visible={addModalVisible} animationType="slide" transparent onRequestClose={handleAddCancel}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Yeni Şirket Ekle</Text>
 
-          <Text style={styles.label}>Email</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={editedData.email}
-              onChangeText={(text) => handleChange("email", text)}
-              keyboardType="email-address"
-            />
-          ) : (
-            <Text style={styles.value}>{companyData.email}</Text>
-          )}
+            <Text style={styles.label}>Şirket İsmi</Text>
+            <TextInput style={styles.input} value={newCompany.name} onChangeText={t => handleAddChange("name", t)} />
 
-          {isEditing ? (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                <Text style={styles.buttonText}>İPTAL</Text>
+            <Text style={styles.label}>Adres</Text>
+            <TextInput style={styles.input} value={newCompany.address} onChangeText={t => handleAddChange("address", t)} />
+
+            <Text style={styles.label}>Telefon</Text>
+            <TextInput style={styles.input} keyboardType="phone-pad" value={newCompany.phone} onChangeText={t => handleAddChange("phone", t)} />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput style={styles.input} keyboardType="email-address" value={newCompany.email} onChangeText={t => handleAddChange("email", t)} />
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleAddCancel}>
+                <Text style={styles.modalButtonText}>İptal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.buttonText}>KAYDET</Text>
+              <TouchableOpacity style={styles.submitButton} onPress={handleAddSubmit}>
+                <Text style={styles.modalButtonText}>Gönder</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.editButtonText}>DÜZENLE</Text>
-            </TouchableOpacity>
-          )}
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
 
-      <Text style={styles.footer}>
-        Copyright © 2025 <Text style={{ fontWeight: "bold" }}>Imo.Cv.</Text> Tüm
-        hakları saklıdır
-      </Text>
+      <Text style={styles.footer}>Copyright © 2025 <Text style={{ fontWeight: "bold" }}>Imo.Cv.</Text> Tüm hakları saklıdır</Text>
     </View>
   );
 };
@@ -170,90 +192,27 @@ const CompaniesScreen = () => {
 export default CompaniesScreen;
 
 const styles = StyleSheet.create({
-  fullPage: {
-    flex: 1,
-    backgroundColor: "#f5faff",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E3A8A",
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    marginBottom: 24,
-  },
-  label: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginTop: 10,
-  },
-  value: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    marginBottom: 8,
-    borderRadius: 6,
-    padding: 10,
-  },
-  editButton: {
-    marginTop: 16,
-    backgroundColor: "#10B981",
-    padding: 12,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  editButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 16,
-  },
-  cancelButton: {
-    backgroundColor: "#EF4444",
-    padding: 10,
-    borderRadius: 6,
-    marginRight: 10,
-  },
-  saveButton: {
-    backgroundColor: "#10B981",
-    padding: 10,
-    borderRadius: 6,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  footer: {
-    textAlign: "center",
-    color: "#6B7280",
-    paddingBottom: 16,
-  },
+  fullPage: { flex: 1, backgroundColor: "#f5faff" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  topBar: { flexDirection: "row", alignItems: "center", padding: 8, backgroundColor: "#fff" },
+  searchInput: { flex: 1, backgroundColor: "#d1d5db", padding: 8, borderRadius: 8, marginRight: 8 },
+  downloadBtn: { backgroundColor: "#3b82f6", padding: 10, borderRadius: 8, marginRight: 8 },
+  downloadBtnText: { color: "white", fontWeight: "bold" },
+  addBtn: { backgroundColor: "#10B981", padding: 10, borderRadius: 8 },
+  addBtnText: { color: "white", fontWeight: "bold" },
+  listContainer: { padding: 8, paddingBottom: 64 },
+  cardContainer: { backgroundColor: "#fff", marginVertical: 6, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#e5e7eb", elevation: 2 },
+  label: { fontSize: 14, fontWeight: "600", color: "#374151", marginTop: 8 },
+  value: { fontSize: 14, color: "#1f2937", marginBottom: 4 },
+  iconRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 12 },
+  iconButton: { marginLeft: 12 },
+  modalContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: 16 },
+  modalContent: { backgroundColor: "#fff", borderRadius: 8, padding: 16 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#1E3A8A", textAlign: "center" },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10, marginBottom: 8 },
+  modalButtonRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 12 },
+  cancelButton: { backgroundColor: "#EF4444", padding: 10, borderRadius: 6, marginRight: 8 },
+  submitButton: { backgroundColor: "#10B981", padding: 10, borderRadius: 6 },
+  modalButtonText: { color: "#fff", fontWeight: "bold" },
+  footer: { textAlign: "center", color: "#6b7280", padding: 16 },
 });
