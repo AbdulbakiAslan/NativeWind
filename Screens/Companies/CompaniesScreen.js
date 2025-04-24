@@ -10,9 +10,15 @@ import {
   StyleSheet,
   Modal,
   ToastAndroid,
+  Alert 
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { GetRealApi, PostRealApi } from "../../Components/ApiService";
+import {
+  GetRealApi,
+  PostRealApi,
+  PutRealApi,
+  DeleteRealApi,
+} from "../../Components/ApiService";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const CompaniesScreen = () => {
@@ -23,8 +29,24 @@ const CompaniesScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Add Modal
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [newCompany, setNewCompany] = useState({ name: "", address: "", phone: "", email: "" });
+  const [newCompany, setNewCompany] = useState({
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+  });
+
+  // Edit Modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [currentCompany, setCurrentCompany] = useState({
+    id: "",
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+  });
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -46,22 +68,24 @@ const CompaniesScreen = () => {
     fetchCompanies().finally(() => setRefreshing(false));
   };
 
-  const handleSearch = text => {
+  const handleSearch = (text) => {
     setSearchText(text);
     if (!text) {
       setFiltered(companies);
       return;
     }
-    const ft = companies.filter(item =>
-      `${item.name} ${item.address} ${item.phone} ${item.email}`
-        .toLowerCase()
-        .includes(text.toLowerCase())
+    setFiltered(
+      companies.filter((item) =>
+        `${item.name} ${item.address} ${item.phone} ${item.email}`
+          .toLowerCase()
+          .includes(text.toLowerCase())
+      )
     );
-    setFiltered(ft);
   };
 
+  // ADD Handlers
   const handleAddChange = (key, value) => {
-    setNewCompany(prev => ({ ...prev, [key]: value }));
+    setNewCompany((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleAddSubmit = async () => {
@@ -85,6 +109,64 @@ const CompaniesScreen = () => {
     setNewCompany({ name: "", address: "", phone: "", email: "" });
   };
 
+  // EDIT Handlers
+  const handleEditClick = (item) => {
+    setCurrentCompany(item);
+    setEditModalVisible(true);
+  };
+
+  const handleEditChange = (key, value) => {
+    setCurrentCompany((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleEditSubmit = async () => {
+    if (!currentCompany.name.trim()) {
+      ToastAndroid.show("Şirket İsmi boş olamaz!", ToastAndroid.SHORT);
+      return;
+    }
+    // PUT {{baseUrl}}/api/Company
+    const result = await PutRealApi("Company", currentCompany, navigation);
+    if (result) {
+      ToastAndroid.show("🔄 Şirket güncellendi!", ToastAndroid.SHORT);
+      setEditModalVisible(false);
+      setCurrentCompany({ id:"", name: "", address: "", phone: "", email: "" });
+      fetchCompanies();
+    } else {
+      ToastAndroid.show("❌ Güncelleme başarısız.", ToastAndroid.SHORT);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditModalVisible(false);
+    setCurrentCompany({ id:"", name: "", address: "", phone: "", email: "" });
+  };
+
+  // DELETE Handler
+  const handleDelete = async (id) => {
+    const result = await DeleteRealApi(`Company/${id}`, navigation);
+    if (result) {
+      ToastAndroid.show("🗑️ Şirket silindi!", ToastAndroid.SHORT);
+      fetchCompanies();
+    } else {
+      ToastAndroid.show("❌ Silme başarısız.", ToastAndroid.SHORT);
+    }
+  };
+  // CONFIRM before delete
+const confirmDelete = (id) => {
+  Alert.alert(
+    "Silme Onayı",
+    "Bu şirketi silmek istediğinize emin misiniz?",
+    [
+      { text: "İptal", style: "cancel" },
+      {
+        text: "Sil",
+        style: "destructive",
+        onPress: () => handleDelete(id)
+      }
+    ]
+  );
+};
+
   const renderItem = ({ item }) => (
     <View style={styles.cardContainer}>
       <Text style={styles.label}>Şirket İsmi</Text>
@@ -107,14 +189,14 @@ const CompaniesScreen = () => {
           <MaterialIcons name="info" size={24} color="green" />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate("EditCompany", { id: item.id })}
+          onPress={() => handleEditClick(item)}
           style={styles.iconButton}
         >
           <MaterialIcons name="edit" size={24} color="blue" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {/* TODO: silme */}} style={styles.iconButton}>
-          <MaterialIcons name="delete" size={24} color="red" />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.iconButton}>
+    <MaterialIcons name="delete" size={24} color="red" />
+  </TouchableOpacity>
       </View>
     </View>
   );
@@ -137,10 +219,16 @@ const CompaniesScreen = () => {
           value={searchText}
           onChangeText={handleSearch}
         />
-        <TouchableOpacity style={styles.downloadBtn} onPress={() => {/* TODO: İndir */}}>
+        <TouchableOpacity
+          style={styles.downloadBtn}
+          onPress={() => {/* TODO: İndir */}}
+        >
           <Text style={styles.downloadBtnText}>İNDİR</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => setAddModalVisible(true)}
+        >
           <Text style={styles.addBtnText}>EKLE</Text>
         </TouchableOpacity>
       </View>
@@ -148,35 +236,50 @@ const CompaniesScreen = () => {
       {/* Liste */}
       <FlatList
         data={filtered}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
 
-      {/* Ekle Modal */}
-      <Modal visible={addModalVisible} animationType="slide" transparent onRequestClose={handleAddCancel}>
+      {/* Add Modal */}
+      <Modal
+        visible={addModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={handleAddCancel}
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Yeni Şirket Ekle</Text>
-
-            <Text style={styles.label}>Şirket İsmi</Text>
-            <TextInput style={styles.input} value={newCompany.name} onChangeText={t => handleAddChange("name", t)} />
-
-            <Text style={styles.label}>Adres</Text>
-            <TextInput style={styles.input} value={newCompany.address} onChangeText={t => handleAddChange("address", t)} />
-
-            <Text style={styles.label}>Telefon</Text>
-            <TextInput style={styles.input} keyboardType="phone-pad" value={newCompany.phone} onChangeText={t => handleAddChange("phone", t)} />
-
-            <Text style={styles.label}>Email</Text>
-            <TextInput style={styles.input} keyboardType="email-address" value={newCompany.email} onChangeText={t => handleAddChange("email", t)} />
-
+            {["name", "address", "phone", "email"].map((key) => (
+              <React.Fragment key={key}>
+                <Text style={styles.label}>
+                  {key === "name"
+                    ? "Şirket İsmi"
+                    : key.charAt(0).toUpperCase() + key.slice(1)}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={newCompany[key]}
+                  onChangeText={(t) => handleAddChange(key, t)}
+                  keyboardType={key === "phone" ? "phone-pad" : key === "email" ? "email-address" : "default"}
+                />
+              </React.Fragment>
+            ))}
             <View style={styles.modalButtonRow}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleAddCancel}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleAddCancel}
+              >
                 <Text style={styles.modalButtonText}>İptal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitButton} onPress={handleAddSubmit}>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleAddSubmit}
+              >
                 <Text style={styles.modalButtonText}>Gönder</Text>
               </TouchableOpacity>
             </View>
@@ -184,12 +287,61 @@ const CompaniesScreen = () => {
         </View>
       </Modal>
 
-      <Text style={styles.footer}>Copyright © 2025 <Text style={{ fontWeight: "bold" }}>Imo.Cv.</Text> Tüm hakları saklıdır</Text>
+      {/* Edit Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={handleEditCancel}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Şirketi Düzenle</Text>
+            {["name", "address", "phone", "email"].map((key) => (
+              <React.Fragment key={key}>
+                <Text style={styles.label}>
+                  {key === "name"
+                    ? "Şirket İsmi"
+                    : key.charAt(0).toUpperCase() + key.slice(1)}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={currentCompany[key]}
+                  onChangeText={(t) => handleEditChange(key, t)}
+                  keyboardType={key === "phone" ? "phone-pad" : key === "email" ? "email-address" : "default"}
+                />
+              </React.Fragment>
+            ))}
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleEditCancel}
+              >
+                <Text style={styles.modalButtonText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleEditSubmit}
+              >
+                <Text style={styles.modalButtonText}>Güncelle</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Text style={styles.footer}>
+        Copyright © 2025{" "}
+        <Text style={{ fontWeight: "bold" }}>Imo.Cv.</Text> Tüm hakları saklıdır
+      </Text>
     </View>
   );
 };
 
 export default CompaniesScreen;
+
+// ... Styles aynı kaldı ...
+
 
 const styles = StyleSheet.create({
   fullPage: { flex: 1, backgroundColor: "#f5faff" },
